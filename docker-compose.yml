@@ -1,0 +1,104 @@
+# One-command local spin-up of the full event-driven pipeline — no AWS
+# account or Gemini key strictly required to see it run end-to-end (though
+# without GEMINI_API_KEYS, cases will fail the triage call and route
+# through the FAILED -> DLQ path, which is itself a fine way to see that
+# failure-handling story in action).
+#
+# LocalStack emulates S3 + DynamoDB + SQS. It does NOT run the real Lambda
+# here — Lambda emulation is comparatively fragile to wire into a
+# one-command demo, so `s3-trigger` polls S3 locally and invokes the exact
+# same handler code that scripts/deploy_s3_trigger.sh deploys to real AWS
+# Lambda in production (see scripts/local_s3_trigger_poller.py).
+#
+# Usage:
+#   docker compose up --build
+#   open web/dashboard.html
+#   curl -X POST http://localhost:8000/api/v1/triage/upload-url ...  (see README)
+
+x-aws-env: &aws_env
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ENDPOINT_URL: http://localstack:4566
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  S3_BUCKET_NAME: ai-vet-triage-media-dev
+  DYNAMODB_TABLE_NAME: vet-triage
+  SQS_QUEUE_NAME: vet-triage-processing
+  SQS_DLQ_NAME: vet-triage-processing-dlq
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  localstack:
+    image: localstack/localstack:3
+    environment:
+      SERVICES: s3,dynamodb,sqs
+      DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # One-off provisioning job: creates the S3 bucket, DynamoDB table + GSI1,
+  # and the SQS queue + DLQ against LocalStack. Exits 0 when done; the
+  # long-running services below wait on that via service_completed_successfully.
+  init:
+    build: .
+    command: sh -c "python scripts/create_bucket.py && python scripts/create_table.py && python scripts/create_queue.py"
+    environment: *aws_env
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *aws_env
+      REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+    volumes:
+      - ./:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: python -m worker.main
+    environment:
+      <<: *aws_env
+      REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+    volumes:
+      - ./:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+
+  s3-trigger:
+    build: .
+    command: python scripts/local_s3_trigger_poller.py
+    environment: *aws_env
+    volumes:
+      - ./:/app
+    depends_on:
+      init:
+        condition: service_completed_successfully

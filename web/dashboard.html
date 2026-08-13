@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>AI Vet-Triage — Clinic Dashboard (WebSocket test client)</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 2rem; background: #f5f5f7; color: #1d1d1f; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #666; margin-bottom: 1rem; font-size: 0.9rem; }
+  #status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem; }
+  #status.connected { background: #d1f2d1; color: #1a7a1a; }
+  #status.disconnected { background: #f2d1d1; color: #a11a1a; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th, td { text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+  th { background: #fafafa; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.02em; }
+  .badge-RED { background: #fdd; color: #a11a1a; }
+  .badge-YELLOW { background: #fff2c2; color: #8a6d00; }
+  .badge-GREEN { background: #d1f2d1; color: #1a7a1a; }
+  .badge-PENDING { background: #e5e5ea; color: #555; }
+  .badge-status { background: #e6f0ff; color: #1a4d8f; font-weight: 600; }
+  .triage-id { font-family: ui-monospace, monospace; font-size: 0.78rem; color: #888; }
+  .empty { color: #999; padding: 1.5rem; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>AI Vet-Triage — Live Dashboard</h1>
+  <div class="subtitle">Connects to <code>ws://&lt;host&gt;/ws/triage</code> and renders every pushed status/priority update as it arrives.</div>
+  <div id="status" class="disconnected">disconnected</div>
+
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Triage ID</th><th>Status</th><th>Priority</th><th>Summary</th></tr>
+    </thead>
+    <tbody id="rows">
+      <tr><td colspan="5" class="empty">Waiting for updates...</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    const WS_URL = "ws://localhost:8000/ws/triage";
+    const statusEl = document.getElementById("status");
+    const rowsEl = document.getElementById("rows");
+    let sawFirstMessage = false;
+
+    function connect() {
+      const socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        statusEl.textContent = "connected";
+        statusEl.className = "connected";
+      };
+
+      socket.onclose = () => {
+        statusEl.textContent = "disconnected — retrying in 3s...";
+        statusEl.className = "disconnected";
+        setTimeout(connect, 3000);
+      };
+
+      socket.onerror = () => socket.close();
+
+      socket.onmessage = (event) => {
+        const update = JSON.parse(event.data);
+        addRow(update);
+      };
+    }
+
+    function addRow(update) {
+      if (!sawFirstMessage) {
+        rowsEl.innerHTML = "";
+        sawFirstMessage = true;
+      }
+      const tr = document.createElement("tr");
+      const time = new Date(update.updated_at || Date.now()).toLocaleTimeString();
+      const priority = update.priority || "PENDING";
+      tr.innerHTML = `
+        <td>${time}</td>
+        <td class="triage-id">${update.triage_id || "-"}</td>
+        <td><span class="badge badge-status">${update.status || "-"}</span></td>
+        <td><span class="badge badge-${priority}">${priority}</span></td>
+        <td>${update.summary || ""}</td>
+      `;
+      rowsEl.prepend(tr);
+    }
+
+    connect();
+  </script>
+</body>
+</html>

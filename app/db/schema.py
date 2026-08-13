@@ -1,0 +1,34 @@
+"""
+Single-table design key helpers for the vet-triage DynamoDB table.
+
+Primary key:
+    PK = TRIAGE#{triage_id}        SK = METADATA
+Access pattern: fetch one triage case by id. (Using a fixed SK, rather than
+just a bare PK, leaves room to later store related items under the same
+partition, e.g. TRIAGE#{id} / EVENT#{timestamp} for an audit trail.)
+
+GSI1 (priority queue index):
+    GSI1PK = PRIORITY#{priority}   GSI1SK = CREATED_AT#{iso_timestamp}
+Access pattern: clinic dashboard queries "all RED cases, newest first" via
+Query(GSI1PK == "PRIORITY#RED", ScanIndexForward=False).
+
+Records are created with GSI1PK = PRIORITY#PENDING before the AI worker has
+produced a classification, so they still surface in an "awaiting triage"
+dashboard view. The worker later updates GSI1PK to the real priority
+(RED/YELLOW/GREEN) once the AI assessment completes.
+"""
+
+GSI1_NAME = "GSI1"
+TRIAGE_SK = "METADATA"
+
+
+def triage_pk(triage_id: str) -> str:
+    return f"TRIAGE#{triage_id}"
+
+
+def priority_gsi1pk(priority: str) -> str:
+    return f"PRIORITY#{priority}"
+
+
+def created_at_gsi1sk(iso_timestamp: str) -> str:
+    return f"CREATED_AT#{iso_timestamp}"

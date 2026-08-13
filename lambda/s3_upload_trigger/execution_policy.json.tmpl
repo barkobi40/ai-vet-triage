@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:__REGION__:__ACCOUNT_ID__:*"
+    },
+    {
+      "Sid": "UpdateTriageRecord",
+      "Effect": "Allow",
+      "Action": "dynamodb:UpdateItem",
+      "Resource": "arn:aws:dynamodb:__REGION__:__ACCOUNT_ID__:table/__TABLE_NAME__"
+    },
+    {
+      "Sid": "EnqueueProcessingJob",
+      "Effect": "Allow",
+      "Action": "sqs:SendMessage",
+      "Resource": "arn:aws:sqs:__REGION__:__ACCOUNT_ID__:__QUEUE_NAME__"
+    }
+  ]
+}
