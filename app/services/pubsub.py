@@ -10,12 +10,30 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+REDIS_CONNECT_TIMEOUT_SECONDS = 2  # fail fast rather than hang if Redis is unreachable
+REDIS_SOCKET_TIMEOUT_SECONDS = 2
+
+
 @lru_cache
 def get_redis_client() -> "redis.Redis | None":
     settings = get_settings()
     if not settings.redis_url:
         return None
-    return redis.from_url(settings.redis_url, decode_responses=True)
+    # Without explicit timeouts, redis-py has no bound on the initial TCP
+    # connect — on a network that silently drops packets (rather than
+    # instantly refusing, like a local "nothing listening" does), that can
+    # hang far longer than a user would ever wait. This only affects the
+    # background listener task (app/ws/listener.py) — HTTP routes like
+    # GET /dashboard never touch Redis at all — but an unbounded hang here
+    # would also delay the listener's own 5s reconnect backoff from ever
+    # kicking in, since the `except Exception` in run_listener() can't
+    # catch an error that hasn't happened yet.
+    return redis.from_url(
+        settings.redis_url,
+        decode_responses=True,
+        socket_connect_timeout=REDIS_CONNECT_TIMEOUT_SECONDS,
+        socket_timeout=REDIS_SOCKET_TIMEOUT_SECONDS,
+    )
 
 
 async def publish_triage_update(payload: dict[str, Any]) -> None:
