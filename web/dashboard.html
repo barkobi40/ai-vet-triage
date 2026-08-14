@@ -2,41 +2,319 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>AI Vet-Triage — Clinic Dashboard (WebSocket test client)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Vet-Triage — Live Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 2rem; background: #f5f5f7; color: #1d1d1f; }
-  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-  .subtitle { color: #666; margin-bottom: 1rem; font-size: 0.9rem; }
-  #status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem; }
-  #status.connected { background: #d1f2d1; color: #1a7a1a; }
-  #status.disconnected { background: #f2d1d1; color: #a11a1a; }
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  th, td { text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-  th { background: #fafafa; font-weight: 600; }
-  tr:last-child td { border-bottom: none; }
-  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.02em; }
-  .badge-RED { background: #fdd; color: #a11a1a; }
-  .badge-YELLOW { background: #fff2c2; color: #8a6d00; }
-  .badge-GREEN { background: #d1f2d1; color: #1a7a1a; }
-  .badge-PENDING { background: #e5e5ea; color: #555; }
-  .badge-status { background: #e6f0ff; color: #1a4d8f; font-weight: 600; }
-  .triage-id { font-family: ui-monospace, monospace; font-size: 0.78rem; color: #888; }
-  .empty { color: #999; padding: 1.5rem; text-align: center; }
+  :root {
+    --accent: #D81B60;
+    --accent-dark: #AD1457;
+    --navy: #1A2B48;
+    --text: #1A2B48;
+    --muted: #6B7280;
+    --border: #ECECEF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #FFFFFF;
+    color: var(--text);
+    /* Lato from Google Fonts, with system fallbacks so the page still
+       looks clean if that request fails or is blocked. */
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .hidden { display: none !important; }
+
+  /* ---- Header / nav ---- */
+  header.topnav {
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.01em; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .header-right { display: flex; align-items: center; gap: 1.5rem; }
+  .profile-widget { color: #C9D1E0; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+  nav.links { display: flex; align-items: center; gap: 1.75rem; }
+  nav.links a { color: #C9D1E0; text-decoration: none; font-weight: 700; font-size: 0.88rem; transition: color 0.15s; }
+  nav.links a:hover { color: #fff; }
+  nav.links a.cta {
+    background: var(--accent);
+    color: #fff;
+    padding: 0.55rem 1.3rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+  }
+  nav.links a.cta:hover { background: var(--accent-dark); color: #fff; }
+
+  /* ---- Profile setup view ---- */
+  .profile-view {
+    min-height: calc(100vh - 68px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+    background: #FAFAFC;
+  }
+  .profile-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.25rem 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 4px 24px rgba(26, 43, 72, 0.06);
+  }
+  .profile-card h2 { margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 900; color: var(--navy); }
+  .profile-card .profile-subtitle { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
+  .profile-card label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 1.1rem; }
+  .profile-card input, .profile-card select {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--text);
+    background: #fff;
+  }
+  .profile-card input:focus, .profile-card select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.12);
+  }
+  .profile-submit {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.85rem;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  .profile-submit:hover { background: var(--accent-dark); }
+  .profile-error {
+    background: #FDECEA;
+    color: #C0392B;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
+  }
+
+  /* ---- Hero ---- */
+  main.hero { max-width: 1180px; margin: 0 auto; padding: 2.5rem 2.5rem 3rem; }
+  .hero-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .hero-heading h1 { font-size: 1.9rem; font-weight: 900; margin: 0 0 0.4rem; }
+  .hero-heading .subtitle { color: var(--muted); font-size: 0.95rem; margin: 0; max-width: 480px; line-height: 1.5; }
+
+  #status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.95rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  #status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  #status.connected { background: #E6F4EA; color: #1E7B34; }
+  #status.connected::before { background: #1E7B34; }
+  #status.disconnected { background: #FBE7EA; color: #C0392B; }
+  #status.disconnected::before { background: #C0392B; }
+
+  /* ---- Illustrative care strip ---- */
+  .care-strip { display: flex; gap: 1.1rem; margin-bottom: 2.25rem; flex-wrap: wrap; }
+  .care-card {
+    flex: 1 1 240px;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    background: #FAFAFC;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+  }
+  .care-card .icon-badge {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #FCE4EC;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .care-card .icon-badge svg { width: 24px; height: 24px; }
+  .care-card .care-copy strong { display: block; font-size: 0.92rem; font-weight: 900; }
+  .care-card .care-copy span { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+
+  /* ---- Triage table ---- */
+  .table-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.9rem 1.35rem; font-size: 0.88rem; }
+  thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: var(--muted);
+    background: #FCFCFD;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid #F1F1F3; }
+  tbody tr:last-child { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 0.28rem 0.8rem; border-radius: 999px; font-weight: 700; font-size: 0.74rem; letter-spacing: 0.02em; }
+  .badge-RED { background: #FDECEA; color: #C0392B; }
+  .badge-YELLOW { background: #FFF6DE; color: #93720A; }
+  .badge-GREEN { background: #E6F4EA; color: #1E7B34; }
+  .badge-PENDING { background: #EEF0F4; color: #5B6270; }
+  .badge-status { background: #E3F2FD; color: #1565C0; }
+
+  .triage-id { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 0.76rem; color: #9AA0AC; }
+  .empty { color: #9AA0AC; padding: 2.75rem; text-align: center; }
+
+  footer.note { text-align: center; color: var(--muted); font-size: 0.78rem; padding: 1.75rem 1rem 2.5rem; }
+  footer.note code { color: #9AA0AC; }
+
+  @media (max-width: 720px) {
+    header.topnav { padding: 1rem 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+    main.hero { padding: 1.75rem 1.25rem 2.5rem; }
+    nav.links { gap: 1rem; }
+    .care-strip { flex-direction: column; }
+    .profile-card { padding: 1.75rem; }
+  }
 </style>
 </head>
 <body>
-  <h1>AI Vet-Triage — Live Dashboard</h1>
-  <div class="subtitle">Connects to <code>ws://&lt;host&gt;/ws/triage</code> and renders every pushed status/priority update as it arrives.</div>
-  <div id="status" class="disconnected">disconnected</div>
 
-  <table>
-    <thead>
-      <tr><th>Time</th><th>Triage ID</th><th>Status</th><th>Priority</th><th>Summary</th></tr>
-    </thead>
-    <tbody id="rows">
-      <tr><td colspan="5" class="empty">Waiting for updates...</td></tr>
-    </tbody>
-  </table>
+  <header class="topnav">
+    <div class="brand"><span class="dot"></span>AI Vet-Triage</div>
+    <div class="header-right">
+      <div id="profileWidget" class="profile-widget"></div>
+      <nav class="links">
+        <a href="#">How it works</a>
+        <a href="#" class="cta">Connect</a>
+      </nav>
+    </div>
+  </header>
+
+  <section id="profileView" class="profile-view">
+    <form id="profileForm" class="profile-card" novalidate>
+      <h2>Complete Your Profile</h2>
+      <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
+      <div id="profileError" class="profile-error hidden"></div>
+
+      <label for="ownerName">Owner's Full Name
+        <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
+      </label>
+      <label for="petName">Pet's Name
+        <input type="text" id="petName" name="petName" required />
+      </label>
+      <label for="species">Species
+        <select id="species" name="species" required>
+          <option value="" disabled selected>Select species</option>
+          <option value="Dog">Dog</option>
+          <option value="Cat">Cat</option>
+        </select>
+      </label>
+      <label for="petAge">Age
+        <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
+      </label>
+
+      <button type="submit" class="profile-submit">Continue to Dashboard</button>
+    </form>
+  </section>
+
+  <div id="dashboardView" class="hidden">
+    <main class="hero">
+      <div class="hero-heading">
+        <div>
+          <h1>Live Triage Dashboard</h1>
+          <p class="subtitle">Every AI-assessed case appears here the moment it's triaged, so your team always reviews the most urgent patients first.</p>
+        </div>
+        <div id="status" class="disconnected">disconnected</div>
+      </div>
+
+      <div class="care-strip">
+        <div class="care-card">
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><title>Paw</title>
+              <ellipse cx="12" cy="16.2" rx="5" ry="4.2"/>
+              <ellipse cx="5.4" cy="10.2" rx="2" ry="2.6" transform="rotate(-20 5.4 10.2)"/>
+              <ellipse cx="9.6" cy="6.4" rx="2" ry="2.6" transform="rotate(-8 9.6 6.4)"/>
+              <ellipse cx="14.4" cy="6.4" rx="2" ry="2.6" transform="rotate(8 14.4 6.4)"/>
+              <ellipse cx="18.6" cy="10.2" rx="2" ry="2.6" transform="rotate(20 18.6 10.2)"/>
+            </svg>
+          </span>
+          <div class="care-copy">
+            <strong>Every pet, prioritized fairly</strong>
+            <span>Dogs, cats, and beyond — ranked by urgency, not arrival time</span>
+          </div>
+        </div>
+        <div class="care-card">
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Heart with pulse</title>
+              <path d="M12 20 C12 20 3 14.5 3 8.5 C3 5.5 5.5 3.5 8 3.5 C9.8 3.5 11.3 4.6 12 6 C12.7 4.6 14.2 3.5 16 3.5 C18.5 3.5 21 5.5 21 8.5 C21 14.5 12 20 12 20 Z"/>
+              <path d="M6 11 L9 11 L10.5 8 L12.5 14 L14 11 L18 11"/>
+            </svg>
+          </span>
+          <div class="care-copy">
+            <strong>AI-assisted, vet-reviewed</strong>
+            <span>Every suggestion is flagged for human confirmation</span>
+          </div>
+        </div>
+        <div class="care-card">
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Shield with checkmark</title>
+              <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"/>
+              <path d="M8.5 12 L11 14.5 L15.5 9.5"/>
+            </svg>
+          </span>
+          <div class="care-copy">
+            <strong>Built for trust &amp; safety</strong>
+            <span>Clear disclaimers and a full audit trail on every case</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr><th>Time</th><th>Triage ID</th><th>Status</th><th>Priority</th><th>Summary</th></tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="5" class="empty">Waiting for updates...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <footer class="note">
+      Connects to <code>ws://&lt;host&gt;/ws/triage</code> and renders every pushed status/priority update as it arrives.
+    </footer>
+  </div>
 
   <script>
     // Derive the WS URL from the page's own origin so it works regardless
@@ -92,6 +370,74 @@
     }
 
     connect();
+  </script>
+
+  <script>
+    // Owner/pet profile onboarding — independent of the WebSocket logic
+    // above (which connects unconditionally regardless of which view is
+    // showing, so no live updates are ever missed while the profile form
+    // is up: they land in the still-hidden #rows table and are already
+    // there once the dashboard is revealed).
+    const PROFILE_STORAGE_KEY = "vetTriageProfile";
+    const profileView = document.getElementById("profileView");
+    const dashboardView = document.getElementById("dashboardView");
+    const profileForm = document.getElementById("profileForm");
+    const profileError = document.getElementById("profileError");
+    const profileWidget = document.getElementById("profileWidget");
+
+    function loadProfile() {
+      try {
+        const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null; // corrupt/unparseable localStorage value -> treat as no profile
+      }
+    }
+
+    function renderProfileWidget(profile) {
+      profileWidget.textContent =
+        `Owner: ${profile.ownerName} | Pet: ${profile.petName} (${profile.species}, ${profile.petAge} y/o)`;
+    }
+
+    function showDashboard(profile) {
+      renderProfileWidget(profile);
+      profileView.classList.add("hidden");
+      dashboardView.classList.remove("hidden");
+    }
+
+    function showProfileForm() {
+      dashboardView.classList.add("hidden");
+      profileView.classList.remove("hidden");
+    }
+
+    profileForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const ownerName = document.getElementById("ownerName").value.trim();
+      const petName = document.getElementById("petName").value.trim();
+      const species = document.getElementById("species").value;
+      const petAgeRaw = document.getElementById("petAge").value;
+      const petAge = petAgeRaw === "" ? NaN : Number(petAgeRaw);
+
+      if (!ownerName || !petName || !species || Number.isNaN(petAge) || petAge < 0) {
+        profileError.textContent = "Please fill in every field before continuing.";
+        profileError.classList.remove("hidden");
+        return;
+      }
+      profileError.classList.add("hidden");
+
+      const profile = { ownerName, petName, species, petAge };
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      showDashboard(profile);
+    });
+
+    // On load: skip straight to the dashboard if a profile is already saved.
+    const existingProfile = loadProfile();
+    if (existingProfile) {
+      showDashboard(existingProfile);
+    } else {
+      showProfileForm();
+    }
   </script>
 </body>
 </html>

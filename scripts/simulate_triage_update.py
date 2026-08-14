@@ -17,6 +17,7 @@ Usage:
     python scripts/simulate_triage_update.py --priority YELLOW
     python scripts/simulate_triage_update.py --priority GREEN --status PROCESSING
     python scripts/simulate_triage_update.py --url http://localhost:9000
+    python scripts/simulate_triage_update.py --priority RED --pet-name Rex --species Dog --pet-age 3
 """
 import argparse
 import json
@@ -26,12 +27,28 @@ import uuid
 from datetime import datetime, timezone
 
 
-def main(priority: str, status: str, base_url: str) -> None:
+def build_summary(priority: str, pet_name: str | None, species: str | None, pet_age: str | None) -> str:
+    # Only use the pet-specific phrasing once *all three* details are given —
+    # a summary with some placeholders filled and others missing would read
+    # worse than just falling back to the generic demo text.
+    if pet_name and species and pet_age:
+        return f"[simulated] {priority} priority case: {pet_age} y/o {species} named {pet_name}."
+    return f"[simulated] Example {priority.lower()}-priority case for WebSocket demo purposes."
+
+
+def main(
+    priority: str,
+    status: str,
+    base_url: str,
+    pet_name: str | None = None,
+    species: str | None = None,
+    pet_age: str | None = None,
+) -> None:
     payload = {
         "triage_id": str(uuid.uuid4()),
         "status": status,
         "priority": priority,
-        "summary": f"[simulated] Example {priority.lower()}-priority case for WebSocket demo purposes.",
+        "summary": build_summary(priority, pet_name, species, pet_age),
         "confidence": 0.91,
         "requires_human_review": priority == "RED",
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -70,5 +87,8 @@ if __name__ == "__main__":
     parser.add_argument("--priority", choices=["RED", "YELLOW", "GREEN", "PENDING"], default="RED")
     parser.add_argument("--status", choices=["PROCESSING", "COMPLETE", "FAILED"], default="COMPLETE")
     parser.add_argument("--url", default="http://localhost:8000", help="Base URL of the running FastAPI server")
+    parser.add_argument("--pet-name", default=None, help="e.g. Rex — used in the summary text if all three --pet-* flags are given")
+    parser.add_argument("--species", default=None, help="e.g. Dog")
+    parser.add_argument("--pet-age", default=None, help="e.g. 3")
     args = parser.parse_args()
-    main(args.priority, args.status, args.url)
+    main(args.priority, args.status, args.url, args.pet_name, args.species, args.pet_age)
