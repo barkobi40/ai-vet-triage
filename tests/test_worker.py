@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 import boto3
 import pytest
@@ -143,3 +144,47 @@ async def test_ai_failure_marks_case_failed_and_leaves_message_for_retry(aws, mo
     assert result_item["status"] == TriageStatus.FAILED.value
     # Priority/GSI1PK untouched: the case still surfaces on the dashboard, now flagged FAILED.
     assert result_item["GSI1PK"] == "PRIORITY#PENDING"
+
+
+@pytest.mark.asyncio
+async def test_case_context_converts_decimal_pet_age_to_json_safe_float(aws, monkeypatch):
+    """DynamoDB hands pet_age back as a Decimal (app/routers/triage.py writes
+    it that way to satisfy boto3's float restriction). publish_triage_update()
+    -> json.dumps() can't serialize Decimal, so this proves _case_context()
+    actually converts it back — a real bug, not a hypothetical one, since
+    Decimal(3) would otherwise crash the publish call for every case that
+    has an owner/pet profile attached."""
+    settings = aws
+    item = await _seed_uploaded_case(settings)
+    await dynamodb.update_item(
+        pk=schema.triage_pk(TRIAGE_ID),
+        sk=schema.TRIAGE_SK,
+        update_expression="SET owner_name = :o, pet_name = :p, pet_age = :a",
+        expression_attribute_values={":o": "Jane Doe", ":p": "Rex", ":a": Decimal("3.5")},
+    )
+
+    s3 = boto3.client("s3", region_name=settings.aws_region)
+    s3.put_object(Bucket=settings.s3_bucket_name, Key=item["s3_key"], Body=b"fake video bytes")
+
+    import worker.main as worker
+
+    published: list[dict] = []
+
+    async def fake_publish(payload: dict) -> None:
+        json.dumps(payload)  # must not raise TypeError on a Decimal
+        published.append(payload)
+
+    async def fake_run_triage(**kwargs) -> TriageResult:
+        return _fake_triage_result()
+
+    monkeypatch.setattr(worker, "run_triage_assessment", fake_run_triage)
+    monkeypatch.setattr(worker, "publish_triage_update", fake_publish)
+
+    sqs, queue_url, message = _send_job_and_receive(settings, item)
+    await worker.handle_message(message)
+
+    complete_payload = next(p for p in published if p["status"] == "COMPLETE")
+    assert complete_payload["owner_name"] == "Jane Doe"
+    assert complete_payload["pet_name"] == "Rex"
+    assert complete_payload["pet_age"] == 3.5
+    assert isinstance(complete_payload["pet_age"], float)

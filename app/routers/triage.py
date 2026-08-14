@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import uuid4
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.core.config import get_settings
 from app.db import dynamodb, schema
@@ -11,8 +12,9 @@ from app.models.triage import (
     TriageStatus,
     UploadUrlRequest,
     UploadUrlResponse,
+    VideoUrlResponse,
 )
-from app.services.s3 import generate_presigned_upload_url
+from app.services.s3 import generate_presigned_download_url, generate_presigned_upload_url
 
 router = APIRouter(prefix="/triage", tags=["triage"])
 
@@ -51,6 +53,13 @@ async def create_upload_url(payload: UploadUrlRequest) -> UploadUrlResponse:
         "priority": Priority.PENDING.value,
         "pet_owner_description": payload.pet_owner_description,
         "species": payload.species,
+        "owner_name": payload.owner_name,
+        "pet_name": payload.pet_name,
+        # DynamoDB's boto3 resource rejects native Python float (needs
+        # Decimal) — the same issue already hit once in worker/main.py's
+        # TriageResult.confidence write; converting via str() avoids binary
+        # float-precision artifacts in the resulting Decimal.
+        "pet_age": Decimal(str(payload.pet_age)) if payload.pet_age is not None else None,
         "s3_bucket": settings.s3_bucket_name,
         "s3_key": s3_key,
         "content_type": payload.content_type,
@@ -67,4 +76,23 @@ async def create_upload_url(payload: UploadUrlRequest) -> UploadUrlResponse:
         s3_bucket=settings.s3_bucket_name,
         expires_in=settings.presigned_url_expiry_seconds,
         status=TriageStatus.PENDING,
+    )
+
+
+@router.get("/{triage_id}/video-url", response_model=VideoUrlResponse)
+async def get_video_url(triage_id: str) -> VideoUrlResponse:
+    """Used by the vet dashboard's embedded player: looks up the case's S3
+    location and returns a short-lived presigned GET URL, rather than
+    proxying the media through the API server."""
+    settings = get_settings()
+    item = await dynamodb.get_item(schema.triage_pk(triage_id), schema.TRIAGE_SK)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+
+    video_url = generate_presigned_download_url(s3_bucket=item["s3_bucket"], s3_key=item["s3_key"])
+    return VideoUrlResponse(
+        triage_id=triage_id,
+        video_url=video_url,
+        content_type=item["content_type"],
+        expires_in=settings.presigned_url_expiry_seconds,
     )

@@ -87,3 +87,12 @@ def test_dashboard_route_serves_html_same_origin_as_the_websocket():
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/html")
         assert "ws/triage" in response.text
+
+
+def test_vet_dashboard_route_serves_html_same_origin_as_the_websocket():
+    with TestClient(app) as client:
+        response = client.get("/vet")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert "ws/triage" in response.text

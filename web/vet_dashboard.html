@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Vet-Triage — Vet Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #D81B60;
+    --accent-dark: #AD1457;
+    --navy: #1A2B48;
+    --text: #1A2B48;
+    --muted: #6B7280;
+    --border: #ECECEF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #F7F8FA;
+    color: var(--text);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .hidden { display: none !important; }
+
+  header.topnav {
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 900; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .header-right { display: flex; align-items: center; gap: 1.5rem; }
+  .vet-widget { color: #C9D1E0; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+  header.topnav a { color: #C9D1E0; text-decoration: none; font-weight: 700; font-size: 0.85rem; }
+  header.topnav a:hover { color: #fff; }
+  #logoutBtn {
+    background: none;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  #logoutBtn:hover { border-color: rgba(255, 255, 255, 0.7); }
+
+  main.queue-main { max-width: 1320px; margin: 0 auto; padding: 2.25rem 2.5rem 3rem; }
+  .queue-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem; }
+  .queue-heading h1 { font-size: 1.7rem; font-weight: 900; margin: 0 0 0.35rem; }
+  .queue-heading .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0; }
+
+  #status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.95rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  #status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  #status.connected { background: #E6F4EA; color: #1E7B34; }
+  #status.connected::before { background: #1E7B34; }
+  #status.disconnected { background: #FBE7EA; color: #C0392B; }
+  #status.disconnected::before { background: #C0392B; }
+
+  .queue-columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; align-items: start; }
+  .queue-column { background: #fff; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
+  .queue-column-header {
+    padding: 0.9rem 1.1rem;
+    font-weight: 900;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .queue-column-header .count {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.78rem;
+  }
+  .queue-column.red .queue-column-header { background: #C0392B; color: #fff; }
+  .queue-column.yellow .queue-column-header { background: #B8860B; color: #fff; }
+  .queue-column.green .queue-column-header { background: #1E7B34; color: #fff; }
+  .queue-column.pending .queue-column-header { background: #5B6270; color: #fff; }
+
+  .queue-column-body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.65rem; min-height: 80px; max-height: 70vh; overflow-y: auto; }
+  .queue-empty { color: #9AA0AC; font-size: 0.82rem; text-align: center; padding: 1.5rem 0.5rem; }
+
+  .case-card {
+    text-align: left;
+    width: 100%;
+    background: #FAFAFC;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .case-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(216, 27, 96, 0.1); }
+  .case-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; }
+  .case-card-top .case-time { color: var(--muted); font-size: 0.72rem; }
+  .case-pet { font-weight: 900; font-size: 0.9rem; color: var(--navy); }
+  .case-pet .case-species { font-weight: 400; color: var(--muted); }
+  .case-owner { color: var(--muted); font-size: 0.78rem; margin-top: 0.1rem; }
+  .case-summary { font-size: 0.8rem; color: var(--text); margin-top: 0.4rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .badge { display: inline-block; padding: 0.22rem 0.65rem; border-radius: 999px; font-weight: 700; font-size: 0.68rem; letter-spacing: 0.02em; }
+  .badge-RED { background: #FDECEA; color: #C0392B; }
+  .badge-YELLOW { background: #FFF6DE; color: #93720A; }
+  .badge-GREEN { background: #E6F4EA; color: #1E7B34; }
+  .badge-PENDING { background: #EEF0F4; color: #5B6270; }
+
+  /* ---- Case review modal ---- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 43, 72, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+  }
+  .modal-card.review-card {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem 2.25rem 1.75rem;
+    max-width: 640px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(26, 43, 72, 0.3);
+  }
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #F3F4F6;
+    color: var(--navy);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-close:hover { background: #E5E7EB; }
+  .review-card h2 { margin: 0 0 0.25rem; font-size: 1.25rem; font-weight: 900; color: var(--navy); padding-right: 2rem; }
+  .review-section { margin-top: 1.25rem; }
+  .review-section h3 { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .review-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1.5rem; font-size: 0.88rem; }
+  .review-profile-grid div span { display: block; color: var(--muted); font-size: 0.72rem; }
+  .review-video-wrap video, .review-video-wrap img { width: 100%; border-radius: 10px; background: #000; display: block; }
+  .review-video-unavailable {
+    padding: 1.5rem;
+    text-align: center;
+    background: #FAFAFC;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .review-ai-summary { background: #FAFAFC; border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; font-size: 0.87rem; line-height: 1.55; }
+  .review-ai-summary .review-disclaimer { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.76rem; font-style: italic; }
+  .review-risk-list { margin: 0.5rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; }
+  .review-response textarea {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .review-response select {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: #fff;
+  }
+  .review-response .form-field-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-top: 1rem; }
+  .review-response .form-field-label:first-child { margin-top: 0; }
+  .review-send-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 0.92rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 1.1rem;
+  }
+  .review-send-btn:hover { background: var(--accent-dark); }
+  .review-send-btn:disabled { background: #D8DBE2; cursor: not-allowed; }
+  .review-send-status { margin-top: 0.6rem; font-size: 0.8rem; color: #1E7B34; font-weight: 700; }
+
+  @media (max-width: 1080px) {
+    .queue-columns { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    header.topnav { padding: 1rem 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+    main.queue-main { padding: 1.5rem 1.25rem 2.5rem; }
+    .queue-columns { grid-template-columns: 1fr; }
+    .review-profile-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topnav">
+    <div class="brand"><span class="dot"></span>AI Vet-Triage — Vet Portal</div>
+    <div class="header-right">
+      <div id="vetWidget" class="vet-widget"></div>
+      <a href="/dashboard">Owner View</a>
+      <button type="button" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <main class="queue-main">
+    <div class="queue-heading">
+      <div>
+        <h1>Priority Queue</h1>
+        <p class="subtitle">Live cases from the moment this page loads, grouped by AI-assigned urgency. Click any case to review.</p>
+      </div>
+      <div id="status" class="disconnected">disconnected</div>
+    </div>
+
+    <div class="queue-columns">
+      <div class="queue-column red">
+        <div class="queue-column-header"><span>RED · Emergency</span><span class="count" id="redCount">0</span></div>
+        <div class="queue-column-body" id="redColumn"><div class="queue-empty">No emergency cases</div></div>
+      </div>
+      <div class="queue-column yellow">
+        <div class="queue-column-header"><span>YELLOW · Urgent</span><span class="count" id="yellowCount">0</span></div>
+        <div class="queue-column-body" id="yellowColumn"><div class="queue-empty">No urgent cases</div></div>
+      </div>
+      <div class="queue-column green">
+        <div class="queue-column-header"><span>GREEN · Non-Emergency</span><span class="count" id="greenCount">0</span></div>
+        <div class="queue-column-body" id="greenColumn"><div class="queue-empty">No routine cases</div></div>
+      </div>
+      <div class="queue-column pending">
+        <div class="queue-column-header"><span>Awaiting Triage</span><span class="count" id="pendingCount">0</span></div>
+        <div class="queue-column-body" id="pendingColumn"><div class="queue-empty">Nothing pending</div></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="reviewModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+    <div class="modal-card review-card">
+      <button type="button" class="modal-close" id="reviewCloseBtn" aria-label="Close">&times;</button>
+      <h2 id="reviewTitle">Case Review</h2>
+      <p class="subtitle" id="reviewSubtitle" style="margin:0;color:var(--muted);font-size:0.85rem;"></p>
+
+      <div class="review-section">
+        <h3>Pet &amp; Owner</h3>
+        <div class="review-profile-grid" id="reviewProfileGrid"></div>
+      </div>
+
+      <div class="review-section">
+        <h3>Uploaded Media</h3>
+        <div class="review-video-wrap" id="reviewVideoWrap">
+          <div class="review-video-unavailable">Loading media preview...</div>
+        </div>
+      </div>
+
+      <div class="review-section">
+        <h3>AI Assessment</h3>
+        <div class="review-ai-summary" id="reviewAiSummary"></div>
+      </div>
+
+      <div class="review-section review-response">
+        <h3>Vet Response</h3>
+        <label class="form-field-label" for="vetStatusSelect">Update Status</label>
+        <select id="vetStatusSelect">
+          <option value="In Review">In Review</option>
+          <option value="Approved for Video Call">Approved for Video Call</option>
+          <option value="Emergency Care Required">Emergency Care Required</option>
+        </select>
+        <label class="form-field-label" for="vetResponseText">Diagnosis / Response to Owner</label>
+        <textarea id="vetResponseText" rows="3" placeholder="e.g. Recommend an in-person exam within the hour. I can join a video call now if needed."></textarea>
+        <button type="button" class="review-send-btn" id="sendVetUpdateBtn">Send Update to Pet Owner</button>
+        <div id="reviewSendStatus" class="review-send-status hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Demo-only vet "session" gate — see web/dashboard.html's Vet Portal
+    // modal for how this gets set. No real backend auth exists; this just
+    // keeps someone from landing on /vet without going through the modal.
+    const VET_SESSION_KEY = "vetTriageVetSession";
+    let vetSession = null;
+    try {
+      vetSession = JSON.parse(localStorage.getItem(VET_SESSION_KEY) || "null");
+    } catch {
+      vetSession = null;
+    }
+    if (!vetSession) {
+      window.location.href = "/dashboard";
+    } else {
+      document.getElementById("vetWidget").textContent = `${vetSession.vetName} · ${vetSession.clinicName}`;
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem(VET_SESSION_KEY);
+      window.location.href = "/dashboard";
+    });
+
+    // ---- WebSocket: same channel the owner dashboard uses. Any case
+    // submitted by an owner, simulated via scripts/simulate_triage_update.py,
+    // or updated by another vet all show up here live.
+    const WS_URL = location.protocol === "file:"
+      ? "ws://localhost:8000/ws/triage"
+      : `ws://${location.host}/ws/triage`;
+    const statusEl = document.getElementById("status");
+
+    function connect() {
+      const socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        statusEl.textContent = "connected";
+        statusEl.className = "connected";
+      };
+
+      socket.onclose = () => {
+        statusEl.textContent = "disconnected — retrying in 3s...";
+        statusEl.className = "disconnected";
+        setTimeout(connect, 3000);
+      };
+
+      socket.onerror = () => socket.close();
+
+      socket.onmessage = (event) => {
+        upsertCase(JSON.parse(event.data));
+      };
+    }
+
+    // ---- Priority queue state. No list/history API exists yet (out of
+    // scope for this pass — see README), so this queue reflects live cases
+    // from the moment the page is open, same as the owner dashboard's table.
+    const cases = new Map(); // triage_id -> latest known full case snapshot
+
+    function upsertCase(update) {
+      if (!update.triage_id) return;
+      cases.set(update.triage_id, { ...(cases.get(update.triage_id) || {}), ...update });
+      renderQueue();
+    }
+
+    function renderQueue() {
+      const buckets = { RED: [], YELLOW: [], GREEN: [], PENDING: [] };
+      for (const c of cases.values()) {
+        const bucket = buckets[c.priority] ? c.priority : "PENDING";
+        buckets[bucket].push(c);
+      }
+      for (const key of Object.keys(buckets)) {
+        buckets[key].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+      }
+      renderColumn("redColumn", "redCount", buckets.RED, "No emergency cases");
+      renderColumn("yellowColumn", "yellowCount", buckets.YELLOW, "No urgent cases");
+      renderColumn("greenColumn", "greenCount", buckets.GREEN, "No routine cases");
+      renderColumn("pendingColumn", "pendingCount", buckets.PENDING, "Nothing pending");
+    }
+
+    function renderColumn(bodyId, countId, items, emptyText) {
+      const body = document.getElementById(bodyId);
+      document.getElementById(countId).textContent = items.length;
+
+      if (items.length === 0) {
+        body.innerHTML = `<div class="queue-empty">${emptyText}</div>`;
+        return;
+      }
+
+      body.innerHTML = "";
+      for (const c of items) {
+        const time = new Date(c.updated_at || Date.now()).toLocaleTimeString();
+        const petLabel = c.pet_name ? `${c.pet_name}` : "Unnamed pet";
+        const speciesLabel = c.species ? ` (${c.species})` : "";
+        const ownerLabel = c.owner_name ? `Owner: ${c.owner_name}` : "";
+        const summary = c.vet_response
+          ? `<strong>Vet:</strong> ${c.vet_response}`
+          : (c.summary || c.pet_owner_description || "");
+
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "case-card";
+        card.innerHTML = `
+          <div class="case-card-top">
+            <span class="badge badge-${c.priority || "PENDING"}">${c.status || "PENDING"}</span>
+            <span class="case-time">${time}</span>
+          </div>
+          <div class="case-pet">${petLabel}<span class="case-species">${speciesLabel}</span></div>
+          ${ownerLabel ? `<div class="case-owner">${ownerLabel}</div>` : ""}
+          <div class="case-summary">${summary}</div>
+        `;
+        card.addEventListener("click", () => openReviewModal(c.triage_id));
+        body.appendChild(card);
+      }
+    }
+
+    // ---- Case review modal ----
+    const reviewModal = document.getElementById("reviewModal");
+    const reviewCloseBtn = document.getElementById("reviewCloseBtn");
+    const reviewSubtitle = document.getElementById("reviewSubtitle");
+    const reviewProfileGrid = document.getElementById("reviewProfileGrid");
+    const reviewVideoWrap = document.getElementById("reviewVideoWrap");
+    const reviewAiSummary = document.getElementById("reviewAiSummary");
+    const vetStatusSelect = document.getElementById("vetStatusSelect");
+    const vetResponseText = document.getElementById("vetResponseText");
+    const sendVetUpdateBtn = document.getElementById("sendVetUpdateBtn");
+    const reviewSendStatus = document.getElementById("reviewSendStatus");
+
+    let currentTriageId = null;
+
+    function profileField(label, value) {
+      return `<div><span>${label}</span>${value || "—"}</div>`;
+    }
+
+    async function openReviewModal(triageId) {
+      const c = cases.get(triageId);
+      if (!c) return;
+      currentTriageId = triageId;
+
+      reviewSubtitle.textContent = `Triage ID: ${triageId}`;
+      reviewProfileGrid.innerHTML =
+        profileField("Owner", c.owner_name) +
+        profileField("Pet", c.pet_name) +
+        profileField("Species", c.species) +
+        profileField("Age", c.pet_age != null ? `${c.pet_age} y/o` : null);
+
+      const riskFactorsHtml = Array.isArray(c.risk_factors) && c.risk_factors.length
+        ? `<ul class="review-risk-list">${c.risk_factors.map((r) => `<li>${r}</li>`).join("")}</ul>`
+        : "";
+      const nextStepsHtml = Array.isArray(c.next_steps) && c.next_steps.length
+        ? `<div style="margin-top:0.5rem;"><strong>Next steps:</strong><ul class="review-risk-list">${c.next_steps.map((s) => `<li>${s}</li>`).join("")}</ul></div>`
+        : "";
+      reviewAiSummary.innerHTML = `
+        ${c.summary || c.pet_owner_description || "No AI summary yet — case is still processing."}
+        ${riskFactorsHtml}
+        ${nextStepsHtml}
+        ${c.confidence != null ? `<div style="margin-top:0.5rem;">Confidence: ${Math.round(c.confidence * 100)}%${c.requires_human_review ? " · Flagged for human review" : ""}</div>` : ""}
+        <div class="review-disclaimer">AI-generated triage suggestion. Must be confirmed by licensed veterinary staff before any clinical action.</div>
+      `;
+
+      vetResponseText.value = "";
+      reviewSendStatus.classList.add("hidden");
+      reviewModal.classList.remove("hidden");
+
+      await loadVideoPreview(triageId);
+    }
+
+    async function loadVideoPreview(triageId) {
+      reviewVideoWrap.innerHTML = `<div class="review-video-unavailable">Loading media preview...</div>`;
+      try {
+        const response = await fetch(`/api/v1/triage/${triageId}/video-url`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const { video_url, content_type } = await response.json();
+
+        if (content_type && content_type.startsWith("image/")) {
+          reviewVideoWrap.innerHTML = `<img src="${video_url}" alt="Uploaded pet photo" />`;
+        } else {
+          reviewVideoWrap.innerHTML = `<video controls src="${video_url}"></video>`;
+        }
+      } catch (err) {
+        // Expected without real AWS credentials configured on the server,
+        // or if the case hasn't finished uploading yet — fail gracefully.
+        reviewVideoWrap.innerHTML = `<div class="review-video-unavailable">Video preview unavailable (${err.message}).</div>`;
+      }
+    }
+
+    function closeReviewModal() {
+      reviewModal.classList.add("hidden");
+      currentTriageId = null;
+    }
+
+    reviewCloseBtn.addEventListener("click", closeReviewModal);
+    reviewModal.addEventListener("click", (event) => {
+      if (event.target === reviewModal) closeReviewModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !reviewModal.classList.contains("hidden")) closeReviewModal();
+    });
+
+    sendVetUpdateBtn.addEventListener("click", async () => {
+      if (!currentTriageId) return;
+      const existing = cases.get(currentTriageId) || {};
+
+      // Send the *full* known snapshot, not just the changed fields — both
+      // this page (on receiving its own broadcast back) and the owner's
+      // dashboard render a whole-row replace keyed by triage_id, so a
+      // partial payload here would blank out summary/owner/pet fields on
+      // whichever table re-renders it.
+      const payload = {
+        ...existing,
+        status: vetStatusSelect.value,
+        vet_response: vetResponseText.value.trim(),
+        updated_at: new Date().toISOString(),
+      };
+
+      sendVetUpdateBtn.disabled = true;
+      try {
+        const response = await fetch("/ws/broadcast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        reviewSendStatus.textContent = `Sent — delivered to ${result.recipients} connected dashboard(s).`;
+        reviewSendStatus.classList.remove("hidden");
+      } catch (err) {
+        reviewSendStatus.textContent = `Could not send update: ${err.message}`;
+        reviewSendStatus.classList.remove("hidden");
+      } finally {
+        sendVetUpdateBtn.disabled = false;
+      }
+    });
+
+    if (vetSession) {
+      connect();
+    }
+  </script>
+</body>
+</html>

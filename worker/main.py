@@ -120,6 +120,7 @@ async def process_triage(triage_id: str, s3_bucket: str, s3_key: str) -> bool:
             "status": TriageStatus.PROCESSING.value,
             "priority": item["priority"],
             "updated_at": datetime.now(timezone.utc).isoformat(),
+            **_case_context(item),
         }
     )
 
@@ -131,8 +132,28 @@ async def process_triage(triage_id: str, s3_bucket: str, s3_key: str) -> bool:
             media_path=media_path,
         )
 
-    await _save_result(pk, triage_id, result)
+    await _save_result(pk, triage_id, item, result)
     return True
+
+
+def _case_context(item: dict[str, Any]) -> dict[str, Any]:
+    """Owner/pet/media fields the vet dashboard's case review panel needs,
+    pulled from the DynamoDB item rather than re-derived — DynamoDB is the
+    single source of truth for this data (see app/routers/triage.py, which
+    is what originally wrote it from the owner's local profile)."""
+    pet_age = item.get("pet_age")
+    return {
+        "owner_name": item.get("owner_name"),
+        "pet_name": item.get("pet_name"),
+        # DynamoDB hands back a Decimal (it was written as one — see
+        # app/routers/triage.py — to satisfy boto3's float restriction);
+        # json.dumps() can't serialize Decimal, so convert back here.
+        "pet_age": float(pet_age) if pet_age is not None else None,
+        "pet_owner_description": item.get("pet_owner_description"),
+        "species": item.get("species"),
+        "s3_bucket": item.get("s3_bucket"),
+        "s3_key": item.get("s3_key"),
+    }
 
 
 async def _claim_for_processing(pk: str) -> bool:
@@ -168,7 +189,7 @@ def _dynamo_safe_result(result: TriageResult) -> dict[str, Any]:
     return json.loads(result.model_dump_json(), parse_float=Decimal)
 
 
-async def _save_result(pk: str, triage_id: str, result: TriageResult) -> None:
+async def _save_result(pk: str, triage_id: str, item: dict[str, Any], result: TriageResult) -> None:
     now = datetime.now(timezone.utc).isoformat()
     await dynamodb.update_item(
         pk=pk,
@@ -203,7 +224,10 @@ async def _save_result(pk: str, triage_id: str, result: TriageResult) -> None:
             "summary": result.summary,
             "confidence": result.confidence,
             "requires_human_review": result.requires_human_review,
+            "risk_factors": result.risk_factors,
+            "next_steps": result.next_steps,
             "updated_at": now,
+            **_case_context(item),
         }
     )
 

@@ -56,3 +56,10 @@ async def dashboard() -> FileResponse:
     connection at all.
     """
     return FileResponse(WEB_DIR / "dashboard.html")
+
+
+@app.get("/vet", tags=["dashboard"])
+async def vet_dashboard() -> FileResponse:
+    """Serves web/vet_dashboard.html same-origin, for the same reason as
+    GET /dashboard above — the vet dashboard also opens a WebSocket."""
+    return FileResponse(WEB_DIR / "vet_dashboard.html")

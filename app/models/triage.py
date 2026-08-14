@@ -23,9 +23,13 @@ class Priority(StrEnum):
 ALLOWED_CONTENT_TYPES: dict[str, str] = {
     "video/mp4": "mp4",
     "video/quicktime": "mov",
+    "video/webm": "webm",
     "audio/mpeg": "mp3",
     "audio/mp4": "m4a",
     "audio/wav": "wav",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
 }
 
 
@@ -42,6 +46,13 @@ class UploadUrlRequest(BaseModel):
     content_type: str = Field(
         ..., description=f"Must be one of: {', '.join(ALLOWED_CONTENT_TYPES)}"
     )
+    # Optional case-tracking metadata from the web dashboard's local owner/pet
+    # profile (see web/dashboard.html). Not required by the triage pipeline
+    # itself (Gemini only needs pet_owner_description + species + the media),
+    # but the vet dashboard's case review panel displays these when present.
+    owner_name: Optional[str] = Field(default=None, max_length=200)
+    pet_name: Optional[str] = Field(default=None, max_length=200)
+    pet_age: Optional[float] = Field(default=None, ge=0)
 
     @field_validator("content_type")
     @classmethod
@@ -60,6 +71,13 @@ class UploadUrlResponse(BaseModel):
     s3_bucket: str
     expires_in: int
     status: TriageStatus
+
+
+class VideoUrlResponse(BaseModel):
+    triage_id: str
+    video_url: str
+    content_type: str
+    expires_in: int
 
 
 # The exact disclaimer text the triage LLM must return. OpenAI's Structured

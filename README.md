@@ -112,10 +112,41 @@ worker/main.py               # standalone AI worker process (SQS -> S3 -> AI -> 
 lambda/s3_upload_trigger/    # S3 ObjectCreated Lambda (dependency-free: stdlib + boto3 only)
 scripts/                     # create_bucket/table/queue.py, deploy_s3_trigger.sh,
                               # local_s3_trigger_poller.py, simulate_triage_update.py
-web/dashboard.html           # zero-dependency WebSocket test client (served via GET /dashboard)
+web/dashboard.html           # pet owner dashboard: onboarding, case submission, live tracking (GET /dashboard)
+web/vet_dashboard.html       # vet command center: priority queue, case review, response box (GET /vet)
 tests/                       # pytest suite — moto (AWS) + fakeredis (Redis), no live creds needed
 Dockerfile, docker-compose.yml  # one-command local spin-up (api + worker + Redis + LocalStack)
 ```
+
+### Two-sided architecture: pet owner + veterinarian
+
+Both roles are served by the same FastAPI app and share one WebSocket channel — there's no
+separate backend per role, just two frontends subscribed to the same live feed.
+
+- **`GET /dashboard`** (pet owner): a unified auth modal gates first use — role selection, then
+  either the owner profile form (name/pet/species/age, persisted to `localStorage`) or the vet
+  register/login flow (see below). Once past onboarding, owners get a **Submit New Case** widget
+  (file + symptom notes) that calls the real `POST /api/v1/triage/upload-url` and `PUT`s straight
+  to S3 — no mocking — plus the live-updating case table from earlier.
+- **`GET /vet`** (veterinarian): a "Vet Portal" button in the owner dashboard's header opens the
+  same auth modal at the vet step. Registration/login here is a **clearly-labeled demo**: account
+  fields (name, clinic, address, phone, license, username) persist to `localStorage`, but the
+  password field is read and discarded, never stored — there's no real backend authentication, and
+  nothing here should be mistaken for one. Logging in redirects to `/vet`, a priority queue
+  (RED/YELLOW/GREEN/Pending columns) fed by the same `/ws/triage` WebSocket the owner dashboard
+  uses. Clicking a case opens a review modal — pet/owner details, an embedded video/image player
+  (via a new presigned-GET endpoint, `GET /api/v1/triage/{id}/video-url`), the AI assessment, and a
+  response box. Sending a response `POST`s the *complete* case snapshot (not a partial diff) to
+  `/ws/broadcast`, which both this vet's own queue and any open owner dashboard receive live —
+  reusing the existing local-broadcast endpoint rather than adding new backend plumbing for it.
+- **What backing this required:** `UploadUrlRequest` gained optional `owner_name`/`pet_name`/
+  `pet_age` fields (stored in DynamoDB, `pet_age` converted to `Decimal` for boto3 and back to
+  `float` when published — the same float/Decimal issue already documented below), and
+  `ALLOWED_CONTENT_TYPES` grew to include `video/webm` and common image types so the owner-side
+  upload widget's accepted files actually match what the backend allows.
+- **No case-list/history API exists yet.** The vet queue reflects live cases from the moment the
+  page is open, same as the owner table — there's no endpoint to fetch cases submitted before that.
+  A real product would need one; out of scope for this pass.
 
 ## Key design decisions & interview talking points
 

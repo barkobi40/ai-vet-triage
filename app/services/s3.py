@@ -32,3 +32,16 @@ def generate_presigned_upload_url(s3_key: str, content_type: str) -> str:
         },
         ExpiresIn=settings.presigned_url_expiry_seconds,
     )
+
+
+def generate_presigned_download_url(s3_bucket: str, s3_key: str) -> str:
+    """Presigned GET URL so the vet dashboard's <video>/<img> element can
+    play back the uploaded media directly from S3, without the API server
+    ever proxying the file bytes."""
+    settings = get_settings()
+    client = get_s3_client()
+    return client.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": s3_bucket, "Key": s3_key},
+        ExpiresIn=settings.presigned_url_expiry_seconds,
+    )

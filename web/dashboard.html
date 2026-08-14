@@ -63,44 +63,111 @@
   }
   nav.links a.cta:hover { background: var(--accent-dark); color: #fff; }
 
-  /* ---- Profile setup view ---- */
-  .profile-view {
-    min-height: calc(100vh - 68px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2.5rem 1.5rem;
-    background: #FAFAFC;
+  .vet-portal-btn {
+    background: transparent;
+    color: #fff;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    padding: 0.5rem 1.1rem;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
   }
-  .profile-card {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2.25rem 2.5rem;
-    max-width: 420px;
+  .vet-portal-btn:hover { border-color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.08); }
+  .vet-portal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .vet-demo-btn {
+    display: block;
     width: 100%;
-    box-shadow: 0 4px 24px rgba(26, 43, 72, 0.06);
+    text-align: center;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 1.1rem;
   }
-  .profile-card h2 { margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 900; color: var(--navy); }
-  .profile-card .profile-subtitle { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
-  .profile-card label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 1.1rem; }
-  .profile-card input, .profile-card select {
+  .vet-demo-btn:hover { color: var(--navy); }
+
+  /* ---- Unified auth modal (role selection -> owner profile / vet register|login) ---- */
+  .modal-card.auth-card { max-width: 520px; }
+  .auth-card h2 { margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 900; color: var(--navy); padding-right: 0; }
+  .auth-card .profile-subtitle { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
+  .auth-card label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 1.1rem; }
+  .auth-card input, .auth-card select {
     display: block;
     width: 100%;
     margin-top: 0.4rem;
-    padding: 0.65rem 0.85rem;
-    border: 1px solid var(--border);
+    padding: 0.7rem 0.9rem;
+    border: 1.5px solid var(--border);
     border-radius: 9px;
     font-size: 0.92rem;
     font-family: inherit;
     color: var(--text);
     background: #fff;
   }
-  .profile-card input:focus, .profile-card select:focus {
+  .auth-card input:focus, .auth-card select:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.12);
   }
+  .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+
+  .auth-back-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 1.1rem;
+  }
+  .auth-back-btn:hover { color: var(--navy); }
+
+  .role-picker { display: flex; gap: 1rem; margin: 1.5rem 0 0.5rem; }
+  .role-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .role-card:hover { border-color: var(--accent); background: #FCE4EC; transform: translateY(-2px); }
+  .role-card .icon-badge { width: 52px; height: 52px; }
+  .role-card .icon-badge svg { width: 26px; height: 26px; }
+  .role-card strong { font-size: 0.98rem; color: var(--navy); }
+  .role-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.35; }
+
+  .vet-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #F3F4F6; border-radius: 999px; padding: 0.25rem; }
+  .vet-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.55rem 0.5rem;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .vet-tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(26, 43, 72, 0.12); }
+
   .profile-submit {
     width: 100%;
     background: var(--accent);
@@ -249,6 +316,72 @@
   #status.disconnected { background: #FBE7EA; color: #C0392B; }
   #status.disconnected::before { background: #C0392B; }
 
+  /* ---- Submit New Case widget ---- */
+  .submit-case-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2.25rem;
+  }
+  .submit-case-card h2 { margin: 0 0 0.3rem; font-size: 1.15rem; font-weight: 900; color: var(--navy); }
+  .submit-case-card .subtitle { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.85rem; }
+  .submit-case-card input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 0.7rem;
+    border: 1.5px dashed var(--border);
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--muted);
+    background: #FAFAFC;
+    margin-top: 0.4rem;
+  }
+  .submit-case-card textarea {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: var(--text);
+    resize: vertical;
+  }
+  .submit-case-card textarea:focus, .submit-case-card input[type="file"]:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.12);
+  }
+  .submit-case-card .form-field-label { margin-top: 1rem; }
+  .submit-case-card .form-field-label:first-child { margin-top: 0; }
+  .submit-case-card .profile-submit { width: auto; padding: 0.75rem 1.75rem; margin-top: 1.25rem; }
+  .submit-case-card .profile-submit:disabled { background: #D8DBE2; cursor: not-allowed; }
+  .submit-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    background: #E3F2FD;
+    color: #1565C0;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .submit-status .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #90CAF9;
+    border-top-color: #1565C0;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ---- Illustrative care strip ---- */
   .care-strip { display: flex; gap: 1.1rem; margin-bottom: 2.25rem; flex-wrap: wrap; }
   .care-card {
@@ -310,7 +443,9 @@
     main.hero { padding: 1.75rem 1.25rem 2.5rem; }
     nav.links { gap: 1rem; }
     .care-strip { flex-direction: column; }
-    .profile-card { padding: 1.75rem; }
+    .auth-card { padding: 1.75rem; }
+    .auth-grid { grid-template-columns: 1fr; }
+    .role-picker { flex-direction: column; }
   }
 </style>
 </head>
@@ -323,6 +458,7 @@
       <nav class="links">
         <button type="button" class="nav-link" id="howItWorksBtn">How it works</button>
         <a href="#" class="cta">Connect</a>
+        <button type="button" class="vet-portal-btn" id="vetPortalBtn">Vet Portal Login</button>
       </nav>
     </div>
   </header>
@@ -377,58 +513,154 @@
     </div>
   </div>
 
-  <section id="profileView" class="profile-view">
-    <form id="profileForm" class="profile-card" novalidate>
-      <h2>Complete Your Profile</h2>
-      <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
-      <div id="profileError" class="profile-error hidden"></div>
+  <div id="authModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal-card auth-card">
+      <button type="button" class="modal-close hidden" id="authCloseBtn" aria-label="Close">&times;</button>
 
-      <label for="ownerName">Owner's Full Name
-        <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
-      </label>
-      <label for="petName">Pet's Name
-        <input type="text" id="petName" name="petName" required />
-      </label>
-      <div>
-        <span class="form-field-label">Species</span>
-        <div class="species-picker" role="group" aria-label="Select species">
-          <button type="button" class="species-option" data-species="Dog" aria-pressed="false">
-            <span class="species-check" aria-hidden="true">&#10003;</span>
-            <svg viewBox="0 0 48 48" fill="none"><title>Dog</title>
-              <path d="M14 20 C6 20 4 30 8 36 C11 40 16 38 16 32 L16 20 Z" fill="currentColor" opacity="0.9"/>
-              <path d="M34 20 C42 20 44 30 40 36 C37 40 32 38 32 32 L32 20 Z" fill="currentColor" opacity="0.9"/>
-              <ellipse cx="24" cy="24" rx="12" ry="11" fill="currentColor"/>
-              <ellipse cx="24" cy="29" rx="6" ry="5" fill="#fff"/>
-              <circle cx="24" cy="27" r="1.6" fill="currentColor"/>
-              <circle cx="19" cy="21" r="1.6" fill="#fff"/>
-              <circle cx="29" cy="21" r="1.6" fill="#fff"/>
-            </svg>
-            <span class="species-label">Dog</span>
+      <!-- Step 1: role selection -->
+      <div id="authStepRole">
+        <h2 id="authModalTitle">Welcome to AI Vet-Triage</h2>
+        <p class="profile-subtitle">Choose how you'd like to continue.</p>
+        <div class="role-picker">
+          <button type="button" class="role-card" data-role="owner">
+            <span class="icon-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><title>Paw</title>
+                <ellipse cx="12" cy="16.2" rx="5" ry="4.2"/>
+                <ellipse cx="5.4" cy="10.2" rx="2" ry="2.6" transform="rotate(-20 5.4 10.2)"/>
+                <ellipse cx="9.6" cy="6.4" rx="2" ry="2.6" transform="rotate(-8 9.6 6.4)"/>
+                <ellipse cx="14.4" cy="6.4" rx="2" ry="2.6" transform="rotate(8 14.4 6.4)"/>
+                <ellipse cx="18.6" cy="10.2" rx="2" ry="2.6" transform="rotate(20 18.6 10.2)"/>
+              </svg>
+            </span>
+            <strong>Pet Owner</strong>
+            <span>Submit cases and track live triage updates</span>
           </button>
-          <button type="button" class="species-option" data-species="Cat" aria-pressed="false">
-            <span class="species-check" aria-hidden="true">&#10003;</span>
-            <svg viewBox="0 0 48 48" fill="none"><title>Cat</title>
-              <path d="M12 20 L8 8 L20 16 Z" fill="currentColor"/>
-              <path d="M36 20 L40 8 L28 16 Z" fill="currentColor"/>
-              <circle cx="24" cy="26" r="13" fill="currentColor"/>
-              <ellipse cx="24" cy="30" rx="5" ry="3.5" fill="#fff"/>
-              <path d="M24 27 L22 30 L26 30 Z" fill="currentColor"/>
-              <ellipse cx="18" cy="24" rx="1.6" ry="2" fill="#fff"/>
-              <ellipse cx="30" cy="24" rx="1.6" ry="2" fill="#fff"/>
-              <path d="M8 28 L16 27 M8 32 L16 31 M40 28 L32 27 M40 32 L32 31" stroke="#fff" stroke-width="1"/>
-            </svg>
-            <span class="species-label">Cat</span>
+          <button type="button" class="role-card" data-role="vet">
+            <span class="icon-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Shield with checkmark</title>
+                <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"/>
+                <path d="M8.5 12 L11 14.5 L15.5 9.5"/>
+              </svg>
+            </span>
+            <strong>Veterinarian</strong>
+            <span>Review cases and respond to pet owners</span>
           </button>
         </div>
-        <input type="hidden" id="species" name="species" />
       </div>
-      <label for="petAge">Age
-        <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
-      </label>
 
-      <button type="submit" class="profile-submit">Continue to Dashboard</button>
-    </form>
-  </section>
+      <!-- Step 2a: pet owner profile -->
+      <div id="authStepOwner" class="hidden">
+        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
+        <h2>Complete Your Profile</h2>
+        <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
+        <form id="profileForm" novalidate>
+          <div id="profileError" class="profile-error hidden"></div>
+
+          <label for="ownerName">Owner's Full Name
+            <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
+          </label>
+          <label for="petName">Pet's Name
+            <input type="text" id="petName" name="petName" required />
+          </label>
+          <div>
+            <span class="form-field-label">Species</span>
+            <div class="species-picker" role="group" aria-label="Select species">
+              <button type="button" class="species-option" data-species="Dog" aria-pressed="false">
+                <span class="species-check" aria-hidden="true">&#10003;</span>
+                <svg viewBox="0 0 48 48" fill="none"><title>Dog</title>
+                  <path d="M14 20 C6 20 4 30 8 36 C11 40 16 38 16 32 L16 20 Z" fill="currentColor" opacity="0.9"/>
+                  <path d="M34 20 C42 20 44 30 40 36 C37 40 32 38 32 32 L32 20 Z" fill="currentColor" opacity="0.9"/>
+                  <ellipse cx="24" cy="24" rx="12" ry="11" fill="currentColor"/>
+                  <ellipse cx="24" cy="29" rx="6" ry="5" fill="#fff"/>
+                  <circle cx="24" cy="27" r="1.6" fill="currentColor"/>
+                  <circle cx="19" cy="21" r="1.6" fill="#fff"/>
+                  <circle cx="29" cy="21" r="1.6" fill="#fff"/>
+                </svg>
+                <span class="species-label">Dog</span>
+              </button>
+              <button type="button" class="species-option" data-species="Cat" aria-pressed="false">
+                <span class="species-check" aria-hidden="true">&#10003;</span>
+                <svg viewBox="0 0 48 48" fill="none"><title>Cat</title>
+                  <path d="M12 20 L8 8 L20 16 Z" fill="currentColor"/>
+                  <path d="M36 20 L40 8 L28 16 Z" fill="currentColor"/>
+                  <circle cx="24" cy="26" r="13" fill="currentColor"/>
+                  <ellipse cx="24" cy="30" rx="5" ry="3.5" fill="#fff"/>
+                  <path d="M24 27 L22 30 L26 30 Z" fill="currentColor"/>
+                  <ellipse cx="18" cy="24" rx="1.6" ry="2" fill="#fff"/>
+                  <ellipse cx="30" cy="24" rx="1.6" ry="2" fill="#fff"/>
+                  <path d="M8 28 L16 27 M8 32 L16 31 M40 28 L32 27 M40 32 L32 31" stroke="#fff" stroke-width="1"/>
+                </svg>
+                <span class="species-label">Cat</span>
+              </button>
+            </div>
+            <input type="hidden" id="species" name="species" />
+          </div>
+          <label for="petAge">Age
+            <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
+          </label>
+
+          <button type="submit" class="profile-submit">Continue to Dashboard</button>
+        </form>
+      </div>
+
+      <!-- Step 2b: veterinarian register / login -->
+      <div id="authStepVet" class="hidden">
+        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
+        <div class="vet-tabs">
+          <button type="button" class="vet-tab active" id="vetTabRegister" data-vet-tab="register">Register</button>
+          <button type="button" class="vet-tab" id="vetTabLogin" data-vet-tab="login">Login</button>
+        </div>
+
+        <form id="vetRegisterForm" novalidate>
+          <h2>Veterinarian Registration</h2>
+          <p class="profile-subtitle">Create your clinic account to access the vet portal. (Demo only — no real credential storage; see code comments.)</p>
+          <div id="vetRegisterError" class="profile-error hidden"></div>
+          <div class="auth-grid">
+            <label for="vetFullName">Full Name
+              <input type="text" id="vetFullName" autocomplete="name" required />
+            </label>
+            <label for="vetClinicName">Hospital / Clinic Name
+              <input type="text" id="vetClinicName" required />
+            </label>
+          </div>
+          <label for="vetClinicAddress">Clinic Address
+            <input type="text" id="vetClinicAddress" autocomplete="street-address" required />
+          </label>
+          <div class="auth-grid">
+            <label for="vetPhone">Phone Number
+              <input type="tel" id="vetPhone" autocomplete="tel" required />
+            </label>
+            <label for="vetLicenseNumber">License Number
+              <input type="text" id="vetLicenseNumber" required />
+            </label>
+          </div>
+          <div class="auth-grid">
+            <label for="vetRegUsername">Username
+              <input type="text" id="vetRegUsername" autocomplete="username" required />
+            </label>
+            <label for="vetRegPassword">Password
+              <input type="password" id="vetRegPassword" autocomplete="new-password" required />
+            </label>
+          </div>
+          <button type="submit" class="profile-submit">Register &amp; Enter Vet Portal</button>
+        </form>
+
+        <form id="vetLoginForm" class="hidden" novalidate>
+          <h2>Veterinarian Login</h2>
+          <p class="profile-subtitle">Sign in to your clinic account.</p>
+          <div id="vetLoginError" class="profile-error hidden"></div>
+          <label for="vetLoginUsername">Username
+            <input type="text" id="vetLoginUsername" autocomplete="username" required />
+          </label>
+          <label for="vetLoginPassword">Password
+            <input type="password" id="vetLoginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="profile-submit">Log In</button>
+          <button type="button" class="vet-demo-btn" id="vetDemoLoginBtn">Log in as Demo Vet</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <div id="dashboardView" class="hidden">
     <main class="hero">
@@ -438,6 +670,32 @@
           <p class="subtitle">Every AI-assessed case appears here the moment it's triaged, so your team always reviews the most urgent patients first.</p>
         </div>
         <div id="status" class="disconnected">disconnected</div>
+      </div>
+
+      <div class="submit-case-card">
+        <h2>Submit New Case</h2>
+        <p class="subtitle">Upload a short video or photo of your pet, and describe what you're seeing.</p>
+        <form id="submitCaseForm" novalidate>
+          <span class="form-field-label">Video or Photo</span>
+          <input
+            type="file"
+            id="caseMedia"
+            accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp"
+            required
+          />
+          <label for="caseNotes" class="form-field-label" style="margin-top:1rem;">Symptom / Behavioral Notes</label>
+          <textarea
+            id="caseNotes"
+            rows="3"
+            placeholder="e.g. Limping on back leg since this morning, whimpering when touched..."
+            required
+          ></textarea>
+
+          <div id="submitCaseError" class="profile-error hidden"></div>
+
+          <button type="submit" class="profile-submit" id="submitCaseBtn">Upload Video &amp; Start Triage</button>
+          <div id="submitCaseStatus" class="submit-status hidden"></div>
+        </form>
       </div>
 
       <div class="care-strip">
@@ -539,17 +797,34 @@
         rowsEl.innerHTML = "";
         sawFirstMessage = true;
       }
-      const tr = document.createElement("tr");
       const time = new Date(update.updated_at || Date.now()).toLocaleTimeString();
       const priority = update.priority || "PENDING";
-      tr.innerHTML = `
+      let summary = update.summary || update.pet_owner_description || "";
+      if (update.vet_response) {
+        summary += `${summary ? " — " : ""}<strong>Vet:</strong> ${update.vet_response}`;
+      }
+      const rowHtml = `
         <td>${time}</td>
         <td class="triage-id">${update.triage_id || "-"}</td>
         <td><span class="badge badge-status">${update.status || "-"}</span></td>
         <td><span class="badge badge-${priority}">${priority}</span></td>
-        <td>${update.summary || ""}</td>
+        <td>${summary}</td>
       `;
-      rowsEl.prepend(tr);
+
+      // Cases go through multiple statuses over time (PENDING -> PROCESSING
+      // -> COMPLETE, plus any later vet response) — update the existing row
+      // for that triage_id in place instead of appending a duplicate one.
+      const existing = update.triage_id
+        ? rowsEl.querySelector(`tr[data-triage-id="${update.triage_id}"]`)
+        : null;
+      if (existing) {
+        existing.innerHTML = rowHtml;
+      } else {
+        const tr = document.createElement("tr");
+        if (update.triage_id) tr.dataset.triageId = update.triage_id;
+        tr.innerHTML = rowHtml;
+        rowsEl.prepend(tr);
+      }
     }
 
     connect();
@@ -558,11 +833,10 @@
   <script>
     // Owner/pet profile onboarding — independent of the WebSocket logic
     // above (which connects unconditionally regardless of which view is
-    // showing, so no live updates are ever missed while the profile form
-    // is up: they land in the still-hidden #rows table and are already
-    // there once the dashboard is revealed).
+    // showing, so no live updates are ever missed while the auth modal is
+    // up: they land in the still-hidden #rows table and are already there
+    // once the dashboard is revealed).
     const PROFILE_STORAGE_KEY = "vetTriageProfile";
-    const profileView = document.getElementById("profileView");
     const dashboardView = document.getElementById("dashboardView");
     const profileForm = document.getElementById("profileForm");
     const profileError = document.getElementById("profileError");
@@ -584,13 +858,8 @@
 
     function showDashboard(profile) {
       renderProfileWidget(profile);
-      profileView.classList.add("hidden");
+      closeAuthModal(true); // force-close even if opened non-dismissable
       dashboardView.classList.remove("hidden");
-    }
-
-    function showProfileForm() {
-      dashboardView.classList.add("hidden");
-      profileView.classList.remove("hidden");
     }
 
     // Species picker: two clickable cards standing in for the old <select>.
@@ -625,7 +894,7 @@
     function closeHowItWorksModal() {
       howItWorksModal.classList.add("hidden");
       // Send focus to whichever view is actually active.
-      if (!profileView.classList.contains("hidden")) {
+      if (!authModal.classList.contains("hidden")) {
         document.getElementById("ownerName").focus();
       } else {
         howItWorksBtn.focus();
@@ -641,6 +910,230 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !howItWorksModal.classList.contains("hidden")) {
         closeHowItWorksModal();
+      }
+    });
+
+    // ---- Unified auth modal: role selection -> owner profile / vet
+    // register|login. This is a clearly-labeled DEMO for the vet side —
+    // there's no real backend authentication for veterinarians. Neither
+    // the register nor the login form actually verifies a password
+    // against anything; the password fields exist for UI realism only,
+    // and are deliberately never persisted to localStorage (unlike the
+    // rest of the "account" fields) so nothing here could be mistaken for
+    // real credential storage, even a fake one.
+    const VET_SESSION_KEY = "vetTriageVetSession";
+    const VET_ACCOUNTS_KEY = "vetTriageVetAccounts";
+    const vetPortalBtn = document.getElementById("vetPortalBtn");
+    const authModal = document.getElementById("authModal");
+    const authCloseBtn = document.getElementById("authCloseBtn");
+    const authStepRole = document.getElementById("authStepRole");
+    const authStepOwner = document.getElementById("authStepOwner");
+    const authStepVet = document.getElementById("authStepVet");
+    const vetTabRegister = document.getElementById("vetTabRegister");
+    const vetTabLogin = document.getElementById("vetTabLogin");
+    const vetRegisterForm = document.getElementById("vetRegisterForm");
+    const vetLoginForm = document.getElementById("vetLoginForm");
+    const vetRegisterError = document.getElementById("vetRegisterError");
+    const vetLoginError = document.getElementById("vetLoginError");
+    const vetDemoLoginBtn = document.getElementById("vetDemoLoginBtn");
+
+    let authModalDismissable = false;
+
+    function showAuthStep(step) {
+      authStepRole.classList.toggle("hidden", step !== "role");
+      authStepOwner.classList.toggle("hidden", step !== "owner");
+      authStepVet.classList.toggle("hidden", step !== "vet");
+    }
+
+    function openAuthModal(step, dismissable) {
+      authModalDismissable = dismissable;
+      authCloseBtn.classList.toggle("hidden", !dismissable);
+      showAuthStep(step);
+      authModal.classList.remove("hidden");
+    }
+
+    function closeAuthModal(force) {
+      // The mandatory first-visit flow (no profile, no vet session yet)
+      // can't be dismissed without picking a role — force=true is used
+      // only by showDashboard()/enterVetPortal() once a choice was made.
+      if (!authModalDismissable && !force) return;
+      authModal.classList.add("hidden");
+      vetPortalBtn.focus();
+    }
+
+    function getVetAccounts() {
+      try {
+        return JSON.parse(localStorage.getItem(VET_ACCOUNTS_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function enterVetPortal(session) {
+      localStorage.setItem(VET_SESSION_KEY, JSON.stringify(session));
+      window.location.href = "/vet";
+    }
+
+    vetPortalBtn.addEventListener("click", () => openAuthModal("vet", true));
+    authCloseBtn.addEventListener("click", () => closeAuthModal(false));
+    authModal.addEventListener("click", (event) => {
+      if (event.target === authModal) closeAuthModal(false); // clicked the backdrop
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !authModal.classList.contains("hidden")) {
+        closeAuthModal(false);
+      }
+    });
+
+    document.querySelectorAll(".role-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        showAuthStep(card.dataset.role === "vet" ? "vet" : "owner");
+      });
+    });
+    document.querySelectorAll(".auth-back-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showAuthStep("role"));
+    });
+
+    function setVetTab(tab) {
+      vetTabRegister.classList.toggle("active", tab === "register");
+      vetTabLogin.classList.toggle("active", tab === "login");
+      vetRegisterForm.classList.toggle("hidden", tab !== "register");
+      vetLoginForm.classList.toggle("hidden", tab !== "login");
+    }
+    vetTabRegister.addEventListener("click", () => setVetTab("register"));
+    vetTabLogin.addEventListener("click", () => setVetTab("login"));
+
+    vetRegisterForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const fullName = document.getElementById("vetFullName").value.trim();
+      const clinicName = document.getElementById("vetClinicName").value.trim();
+      const clinicAddress = document.getElementById("vetClinicAddress").value.trim();
+      const phone = document.getElementById("vetPhone").value.trim();
+      const licenseNumber = document.getElementById("vetLicenseNumber").value.trim();
+      const username = document.getElementById("vetRegUsername").value.trim();
+      const password = document.getElementById("vetRegPassword").value; // read, never persisted
+
+      if (!fullName || !clinicName || !clinicAddress || !phone || !licenseNumber || !username || !password) {
+        vetRegisterError.textContent = "Please fill in every field before continuing.";
+        vetRegisterError.classList.remove("hidden");
+        return;
+      }
+      vetRegisterError.classList.add("hidden");
+
+      const accounts = getVetAccounts();
+      accounts[username] = { fullName, clinicName, clinicAddress, phone, licenseNumber, username };
+      localStorage.setItem(VET_ACCOUNTS_KEY, JSON.stringify(accounts));
+
+      enterVetPortal({ vetName: fullName, clinicName, username, demo: true });
+    });
+
+    vetLoginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const username = document.getElementById("vetLoginUsername").value.trim();
+      const password = document.getElementById("vetLoginPassword").value; // demo only, never verified
+
+      if (!username || !password) {
+        vetLoginError.textContent = "Please enter both username and password.";
+        vetLoginError.classList.remove("hidden");
+        return;
+      }
+
+      const account = getVetAccounts()[username];
+      if (!account) {
+        vetLoginError.textContent = "No demo account found for that username. Try registering, or use Demo Vet login below.";
+        vetLoginError.classList.remove("hidden");
+        return;
+      }
+      vetLoginError.classList.add("hidden");
+      enterVetPortal({ vetName: account.fullName, clinicName: account.clinicName, username, demo: true });
+    });
+
+    vetDemoLoginBtn.addEventListener("click", () => {
+      enterVetPortal({ vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true });
+    });
+
+    // Submit New Case: calls the real backend (POST /api/v1/triage/upload-url,
+    // then PUT the file straight to S3) — nothing here is mocked. If AWS
+    // isn't configured on the server, the first call fails with a clear
+    // error in submitCaseError rather than hanging in the loading state.
+    const submitCaseForm = document.getElementById("submitCaseForm");
+    const submitCaseError = document.getElementById("submitCaseError");
+    const submitCaseStatus = document.getElementById("submitCaseStatus");
+    const submitCaseBtn = document.getElementById("submitCaseBtn");
+
+    function setSubmitCaseStatus(message) {
+      submitCaseStatus.innerHTML = `<span class="spinner"></span>${message}`;
+      submitCaseStatus.classList.remove("hidden");
+    }
+
+    submitCaseForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      submitCaseError.classList.add("hidden");
+
+      const file = document.getElementById("caseMedia").files[0];
+      const notes = document.getElementById("caseNotes").value.trim();
+
+      if (!file || !notes) {
+        submitCaseError.textContent = "Please choose a video/photo and describe the symptoms.";
+        submitCaseError.classList.remove("hidden");
+        return;
+      }
+
+      const profile = loadProfile();
+      submitCaseBtn.disabled = true;
+      setSubmitCaseStatus("AI Analyzing Video &amp; Symptoms...");
+
+      try {
+        const createResponse = await fetch("/api/v1/triage/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pet_owner_description: notes,
+            species: profile ? profile.species : null,
+            content_type: file.type,
+            owner_name: profile ? profile.ownerName : null,
+            pet_name: profile ? profile.petName : null,
+            pet_age: profile ? profile.petAge : null,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const body = await createResponse.json().catch(() => ({}));
+          throw new Error(body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${createResponse.status})`);
+        }
+
+        const { triage_id, upload_url } = await createResponse.json();
+
+        setSubmitCaseStatus("Uploading media...");
+        const uploadResponse = await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!uploadResponse.ok) {
+          throw new Error(`Media upload failed (HTTP ${uploadResponse.status})`);
+        }
+
+        // Show the new case immediately, PENDING — addRow() dedupes by
+        // triage_id, so the S3 trigger -> worker -> WebSocket flow (once
+        // it runs) updates this same row in place as it progresses,
+        // rather than adding a second entry for the same case.
+        addRow({
+          triage_id,
+          status: "PENDING",
+          priority: "PENDING",
+          summary: notes,
+          updated_at: new Date().toISOString(),
+        });
+
+        setSubmitCaseStatus("Case submitted — tracking below as AI analysis completes.");
+        submitCaseForm.reset();
+      } catch (err) {
+        submitCaseStatus.classList.add("hidden");
+        submitCaseError.textContent = `Could not submit this case: ${err.message}`;
+        submitCaseError.classList.remove("hidden");
+      } finally {
+        submitCaseBtn.disabled = false;
       }
     });
 
@@ -666,11 +1159,13 @@
     });
 
     // On load: skip straight to the dashboard if a profile is already saved.
+    // Otherwise show the mandatory (non-dismissable) role-selection modal —
+    // a first-time visitor must pick a role before the app is usable.
     const existingProfile = loadProfile();
     if (existingProfile) {
       showDashboard(existingProfile);
     } else {
-      showProfileForm();
+      openAuthModal("role", false);
     }
   </script>
 </body>
