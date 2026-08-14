@@ -112,7 +112,7 @@ worker/main.py               # standalone AI worker process (SQS -> S3 -> AI -> 
 lambda/s3_upload_trigger/    # S3 ObjectCreated Lambda (dependency-free: stdlib + boto3 only)
 scripts/                     # create_bucket/table/queue.py, deploy_s3_trigger.sh,
                               # local_s3_trigger_poller.py, simulate_triage_update.py
-web/dashboard.html           # zero-dependency WebSocket test client
+web/dashboard.html           # zero-dependency WebSocket test client (served via GET /dashboard)
 tests/                       # pytest suite — moto (AWS) + fakeredis (Redis), no live creds needed
 Dockerfile, docker-compose.yml  # one-command local spin-up (api + worker + Redis + LocalStack)
 ```
@@ -158,6 +158,14 @@ its own subscriber (`app/ws/listener.py`) feeding its own local `ConnectionManag
 (`app/ws/manager.py`), so a dashboard client stays correctly updated no matter which replica it's
 connected to. When `REDIS_URL` is unset, publish/subscribe both degrade to a clean no-op — the
 DynamoDB write still succeeds, the dashboard just won't get a live push.
+
+For local demos specifically, `POST /ws/broadcast` (`app/routers/ws.py`) is a narrow, deliberate
+exception: it broadcasts directly to whatever's connected to *this* process, over plain HTTP. That
+doesn't contradict the point above — it's not an in-process fallback (the simulate script and the
+API are still separate processes), it's a second, Redis-free way for one process to reach another
+on the same machine, which is all a single local `python main.py` needs. It's unauthenticated and
+single-replica-only by design, so it's not a substitute for Redis in any multi-instance deployment
+— see `scripts/simulate_triage_update.py`.
 
 **Multimodal AI handling: one native call, no manual media processing.** Gemini 1.5 Flash ingests
 the raw uploaded file directly via `genai.upload_file()` and processes both the video frames and
@@ -253,7 +261,7 @@ Without it, uploaded cases will fail at the AI step and route through `FAILED` �
 the DLQ — which is actually a convenient way to watch that exact failure-handling path fire for
 real, without needing a key.
 
-Then, same as the manual flow below: `open web/dashboard.html` and `POST` to
+Then, same as the manual flow below: `open http://localhost:8000/dashboard` and `POST` to
 `http://localhost:8000/api/v1/triage/upload-url`.
 
 ### 3. Full manual end-to-end run (real AWS + Gemini + Redis)
@@ -284,8 +292,10 @@ python -m worker.main      # AI worker, long-polling SQS
 
 **Open the live dashboard:**
 ```bash
-open web/dashboard.html
+open http://localhost:8000/dashboard
 ```
+(Not `open web/dashboard.html` — see the note in section 4 below on why that opens the page via
+`file://`, which silently breaks the WebSocket connection in some browsers.)
 
 **Trigger a real case:**
 ```bash
@@ -302,12 +312,47 @@ Within a few seconds: S3 fires the event, Lambda flips the record to `UPLOADED` 
 the worker picks it up, sends the media straight to Gemini for triage, writes the result, and the
 dashboard updates live — no polling.
 
-**Or skip AWS/Gemini entirely and just demo the WebSocket layer:**
+### 4. Zero-infrastructure WebSocket demo (no Docker, no Redis, no AWS, no Gemini)
+
+The fastest way to see the live dashboard push working, with nothing running except the Python
+app itself:
+
+**Terminal 1 — start the API:**
+```bash
+python main.py
+```
+
+**Browser — open the dashboard:**
+```bash
+open http://localhost:8000/dashboard
+```
+Open it in a second tab too, to see the fan-out to multiple clients.
+
+**Use `http://localhost:8000/dashboard`, not `open web/dashboard.html` directly.** Opening the raw
+file loads it via `file://`, and browsers (Safari in particular) restrict outbound network
+requests — including the WebSocket handshake — from `file://` pages. The dashboard just shows
+"disconnected," and `POST /ws/broadcast` correctly reports `"recipients": 0` because the
+connection never actually completed on the client side — there's no server-side error to point at,
+since nothing went wrong on the server. `GET /dashboard` (`app/main.py`) exists specifically to
+serve the same file same-origin with the WebSocket instead, which sidesteps the restriction
+entirely rather than working around it. `web/dashboard.html` derives its `WS_URL` from
+`location.host`, so this works regardless of which port you run the server on.
+
+**Terminal 2 — fire a simulated event:**
 ```bash
 python scripts/simulate_triage_update.py --priority RED
+python scripts/simulate_triage_update.py --priority YELLOW --status PROCESSING
+python scripts/simulate_triage_update.py --priority GREEN
 ```
-Publishes a fake update straight to Redis. Open `web/dashboard.html` in two browser tabs first to
-see the fan-out itself — both update from one script invocation.
+Each call POSTs straight to `http://localhost:8000/ws/broadcast`, which broadcasts to every
+WebSocket client connected to this process — both browser tabs update instantly.
+
+This intentionally does **not** go through Redis (see the design-decision note above): a plain
+HTTP call from one local process to another is simpler and needs zero setup, which is exactly what
+a local demo needs. It's not how the real worker notifies the API in production — that's Redis
+pub/sub, required once there's more than one API replica — but it exercises the same
+`ConnectionManager`/`/ws/triage` code the real pipeline uses, so it's a faithful demo of the push
+mechanism itself.
 
 ## Environment variables
 

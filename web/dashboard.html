@@ -39,7 +39,14 @@
   </table>
 
   <script>
-    const WS_URL = "ws://localhost:8000/ws/triage";
+    // Derive the WS URL from the page's own origin so it works regardless
+    // of host/port when served via GET /dashboard (the recommended way to
+    // open this file — see app/main.py). Falls back to localhost:8000 if
+    // opened directly via file://, where location.host is empty and
+    // WebSocket connections are unreliable in some browsers anyway.
+    const WS_URL = location.protocol === "file:"
+      ? "ws://localhost:8000/ws/triage"
+      : `ws://${location.host}/ws/triage`;
     const statusEl = document.getElementById("status");
     const rowsEl = document.getElementById("rows");
     let sawFirstMessage = false;

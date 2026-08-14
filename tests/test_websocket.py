@@ -50,3 +50,40 @@ def test_ws_route_accepts_connection_and_deregisters_on_disconnect():
                 break
             time.sleep(0.05)
         assert len(manager._connections) == 0
+
+
+def test_broadcast_endpoint_delivers_to_connected_websocket_client():
+    """POST /ws/broadcast is what scripts/simulate_triage_update.py calls to
+    demo the WebSocket layer without Redis — this is the actual HTTP
+    contract that script depends on."""
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws/triage") as websocket:
+            payload = {"triage_id": "sim-1", "status": "COMPLETE", "priority": "RED"}
+            response = client.post("/ws/broadcast", json=payload)
+
+            assert response.status_code == 200
+            assert response.json() == {"broadcast": True, "recipients": 1}
+            assert websocket.receive_json() == payload
+
+
+def test_broadcast_endpoint_reports_zero_recipients_when_nobody_connected():
+    with TestClient(app) as client:
+        response = client.post("/ws/broadcast", json={"triage_id": "sim-2", "priority": "GREEN"})
+
+        assert response.status_code == 200
+        assert response.json() == {"broadcast": True, "recipients": 0}
+
+
+def test_dashboard_route_serves_html_same_origin_as_the_websocket():
+    """GET /dashboard exists specifically so the page and ws://.../ws/triage
+    are same-origin — opening dashboard.html via file:// instead hits
+    browser restrictions on outbound requests from file:// pages, which
+    silently breaks the WebSocket handshake (confirmed against a real
+    browser: the server correctly reports 0 recipients because the
+    connection never completes client-side)."""
+    with TestClient(app) as client:
+        response = client.get("/dashboard")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert "ws/triage" in response.text

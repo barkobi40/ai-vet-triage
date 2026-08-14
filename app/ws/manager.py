@@ -27,6 +27,10 @@ class ConnectionManager:
         self._connections.discard(websocket)
         logger.info("WebSocket disconnected (%d active)", len(self._connections))
 
+    @property
+    def connection_count(self) -> int:
+        return len(self._connections)
+
     async def broadcast(self, message: dict[str, Any]) -> None:
         stale: list[WebSocket] = []
         for connection in self._connections:
