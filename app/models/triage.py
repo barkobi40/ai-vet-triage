@@ -59,6 +59,13 @@ class UploadUrlRequest(BaseModel):
     # never highlights for anyone, it isn't dropped or misfiled.
     vet_id: Optional[str] = Field(default=None, max_length=100)
     clinic_name: Optional[str] = Field(default=None, max_length=200)
+    # Stable per-browser id (crypto.randomUUID(), generated once and kept
+    # in the owner's localStorage profile — see web/dashboard.html) used to
+    # scope GET /triage?owner_id=... on page load. There's no real
+    # authentication in this demo, so this is the closest honest substitute
+    # for "the active session/user": durable across refreshes, but not a
+    # security boundary.
+    owner_id: Optional[str] = Field(default=None, max_length=100)
 
     @field_validator("content_type")
     @classmethod
@@ -84,6 +91,35 @@ class VideoUrlResponse(BaseModel):
     video_url: str
     content_type: str
     expires_in: int
+
+
+class CaseSummary(BaseModel):
+    """One case as returned by GET /triage — the same shape as a WebSocket
+    push (see app/routers/triage.py's broadcast_payload construction and
+    worker/main.py's publish_triage_update calls), so the dashboards can
+    feed a fetched case straight into the same addRow()/upsertCase()
+    rendering path they already use for live updates."""
+
+    triage_id: str
+    status: TriageStatus
+    priority: Priority
+    summary: Optional[str] = None
+    pet_owner_description: Optional[str] = None
+    owner_name: Optional[str] = None
+    pet_name: Optional[str] = None
+    species: Optional[str] = None
+    pet_age: Optional[float] = None
+    vet_id: Optional[str] = None
+    clinic_name: Optional[str] = None
+    confidence: Optional[float] = None
+    risk_factors: Optional[list[str]] = None
+    next_steps: Optional[list[str]] = None
+    requires_human_review: Optional[bool] = None
+    updated_at: Optional[str] = None
+
+
+class CaseListResponse(BaseModel):
+    cases: list[CaseSummary]
 
 
 # The exact disclaimer text the triage LLM must return. OpenAI's Structured

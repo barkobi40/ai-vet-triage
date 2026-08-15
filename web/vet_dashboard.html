@@ -271,7 +271,7 @@
     <div class="queue-heading">
       <div>
         <h1>Priority Queue</h1>
-        <p class="subtitle">Live cases from the moment this page loads, grouped by AI-assigned urgency. Click any case to review.</p>
+        <p class="subtitle">Every case in the system, grouped by AI-assigned urgency and updated live. Click any case to review.</p>
       </div>
       <div id="status" class="disconnected">disconnected</div>
     </div>
@@ -386,15 +386,30 @@
       };
     }
 
-    // ---- Priority queue state. No list/history API exists yet (out of
-    // scope for this pass — see README), so this queue reflects live cases
-    // from the moment the page is open, same as the owner dashboard's table.
+    // ---- Priority queue state.
     const cases = new Map(); // triage_id -> latest known full case snapshot
 
     function upsertCase(update) {
       if (!update.triage_id) return;
       cases.set(update.triage_id, { ...(cases.get(update.triage_id) || {}), ...update });
       renderQueue();
+    }
+
+    // Populates the queue with every existing case on page load/refresh —
+    // without this, the queue only ever reflected live WebSocket pushes
+    // from the moment the page happened to be open, so a refresh silently
+    // dropped every case that arrived before it. Fetches everything (no
+    // owner_id/vet_id filter) since the vet queue always shows all cases,
+    // highlighting — not filtering to — this vet's own via isAssignedToMe().
+    async function loadExistingCases() {
+      try {
+        const response = await fetch("/api/v1/triage");
+        if (!response.ok) return;
+        const { cases: fetched } = await response.json();
+        fetched.forEach(upsertCase);
+      } catch {
+        // Best effort — live WebSocket updates for new cases still work.
+      }
     }
 
     function isAssignedToMe(c) {
@@ -584,6 +599,7 @@
     });
 
     if (vetSession) {
+      loadExistingCases();
       connect();
     }
   </script>

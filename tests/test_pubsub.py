@@ -79,3 +79,24 @@ async def test_listener_relays_redis_messages_to_connected_websockets(fake_redis
         await listener_task
 
     assert sent == [payload]
+
+
+@pytest.mark.asyncio
+async def test_publish_triage_update_does_not_raise_when_redis_is_configured_but_unreachable(monkeypatch):
+    """REDIS_URL pointing at a real, configured-but-dead host (unlike
+    redis_url=None, which is the already-covered no-op path) must never
+    surface as a failure of the caller's request — see app/routers/triage.py,
+    where this is called inline during case creation."""
+    import redis.asyncio as redis
+
+    from app.services import pubsub
+
+    dead_client = redis.from_url(
+        "redis://localhost:1",  # nothing listens on port 1
+        decode_responses=True,
+        socket_connect_timeout=0.5,
+        socket_timeout=0.5,
+    )
+    monkeypatch.setattr(pubsub, "get_redis_client", lambda: dead_client)
+
+    await pubsub.publish_triage_update({"triage_id": "unreachable-redis-test"})

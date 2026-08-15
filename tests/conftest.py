@@ -6,22 +6,31 @@ from moto import mock_aws
 @pytest.fixture(autouse=True)
 def _reset_lru_caches():
     """
-    get_settings() and pubsub.get_redis_client() are both @lru_cache'd with
-    no arguments — correct for a long-lived production process, but it
-    means whichever test runs first "locks in" a cached value (e.g. a real
-    Redis client resolved from a developer's local .env) for every test
-    that runs after it in the same pytest process, regardless of any later
-    monkeypatching. Clearing both before and after every test keeps the
-    suite hermetic and independent of test execution order.
+    get_settings(), pubsub.get_redis_client(), dynamodb.get_table()/
+    get_dynamodb_resource(), and s3.get_s3_client() are all @lru_cache'd
+    with no arguments — correct for a long-lived production process, but
+    it means whichever test runs first "locks in" a cached value for every
+    test that runs after it in the same pytest process, regardless of any
+    later monkeypatching. Concretely: a boto3 client that first resolved
+    credentials outside an active moto mock_aws() context (see
+    tests/test_local_storage_fallback.py, which deliberately runs without
+    the `aws` fixture to exercise the no-AWS fallback path) caches that
+    "no credentials" resolution, and a *later* test that does use the
+    `aws` fixture would otherwise still get NoCredentialsError from the
+    same stale cached client. Clearing every one of these before and after
+    each test keeps the suite hermetic and independent of execution order.
     """
     from app.core.config import get_settings
+    from app.db.dynamodb import get_dynamodb_resource, get_table
     from app.services.pubsub import get_redis_client
+    from app.services.s3 import get_s3_client
 
-    get_settings.cache_clear()
-    get_redis_client.cache_clear()
+    caches = (get_settings, get_redis_client, get_dynamodb_resource, get_table, get_s3_client)
+    for cache in caches:
+        cache.cache_clear()
     yield
-    get_settings.cache_clear()
-    get_redis_client.cache_clear()
+    for cache in caches:
+        cache.cache_clear()
 
 
 @pytest.fixture

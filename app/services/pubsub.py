@@ -46,9 +46,11 @@ async def publish_triage_update(payload: dict[str, Any]) -> None:
     worker and the API are separate processes (often separate hosts) — an
     in-memory broadcaster living inside one API process has no way to
     observe a message published from another process. If REDIS_URL isn't
-    configured, this degrades to a no-op: the DynamoDB write the caller
-    already made still stands, the dashboard just won't get a live push
-    (it would need to poll/refresh instead).
+    configured, or Redis is configured but unreachable, this degrades to a
+    no-op: the DynamoDB write the caller already made still stands, the
+    dashboard just won't get a live push (it would need to poll/refresh
+    instead). Callers must be able to trust that a Redis outage never
+    surfaces as a failure of the case-creation/update request itself.
     """
     client = get_redis_client()
     if client is None:
@@ -57,7 +59,14 @@ async def publish_triage_update(payload: dict[str, Any]) -> None:
             payload.get("triage_id"),
         )
         return
-    await client.publish(get_settings().redis_triage_updates_channel, json.dumps(payload))
+    try:
+        await client.publish(get_settings().redis_triage_updates_channel, json.dumps(payload))
+    except redis.RedisError as exc:
+        logger.warning(
+            "Redis unreachable (%s); skipping real-time broadcast for triage_id=%s",
+            exc,
+            payload.get("triage_id"),
+        )
 
 
 async def subscribe_triage_updates() -> AsyncIterator[dict[str, Any]]:

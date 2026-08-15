@@ -856,6 +856,39 @@
       }
     }
 
+    // No real authentication exists in this demo — ownerId is the closest
+    // honest substitute for "the active session/user": a stable id
+    // generated once per browser and persisted alongside the rest of the
+    // profile, sent with every case submission, and used to scope
+    // GET /api/v1/triage?owner_id=... on page load (see loadExistingCases
+    // below). Backfills existing profiles saved before this field existed,
+    // so returning users don't lose case history just because they set up
+    // their profile before this change.
+    function ensureOwnerId(profile) {
+      if (!profile.ownerId) {
+        profile.ownerId = crypto.randomUUID();
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      }
+      return profile;
+    }
+
+    async function loadExistingCases(ownerId) {
+      if (!ownerId) return;
+      try {
+        const response = await fetch(`/api/v1/triage?owner_id=${encodeURIComponent(ownerId)}`);
+        if (!response.ok) return;
+        const { cases } = await response.json();
+        // addRow() prepends, so feed it oldest-first to end up newest-on-top.
+        cases
+          .slice()
+          .sort((a, b) => new Date(a.updated_at || 0) - new Date(b.updated_at || 0))
+          .forEach(addRow);
+      } catch {
+        // Best effort — a failed fetch here just means the table starts
+        // empty; live WebSocket updates for new cases still work fine.
+      }
+    }
+
     // Clinic directory for the "Select Your Veterinarian / Clinic" field.
     // vet-id "demo-vet" deliberately matches the "Log in as Demo Vet"
     // quick-login below, so picking "Demo Clinic" here and logging in as
@@ -901,9 +934,11 @@
     }
 
     function showDashboard(profile) {
+      ensureOwnerId(profile);
       renderProfileWidget(profile);
       closeAuthModal(true); // force-close even if opened non-dismissable
       dashboardView.classList.remove("hidden");
+      loadExistingCases(profile.ownerId);
     }
 
     // Species picker: two clickable cards standing in for the old <select>.
@@ -1185,6 +1220,7 @@
             pet_age: profile ? profile.petAge : null,
             vet_id: profile ? profile.vetId : null,
             clinic_name: profile ? profile.clinicName : null,
+            owner_id: profile ? profile.ownerId : null,
           }),
         });
 
