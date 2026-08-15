@@ -64,6 +64,45 @@ _MOCK_NEXT_STEP_BY_PRIORITY = {
     Priority.GREEN: "Monitor at home and consult a veterinarian if symptoms persist or worsen.",
 }
 
+# Keyword-based mock severity classification (see _simulate_local_triage) —
+# a deliberately simple, explainable stand-in for the real Gemini call
+# (app/services/ai/triage_llm.py), which needs a Gemini API key and real
+# media neither of which exist in the local-storage-fallback scenario this
+# only runs under. Checked in this order (CRITICAL first) so a phrase like
+# "severe bleeding" — which contains the word "bleeding" — is never
+# undercounted as merely URGENT just because a broader keyword also
+# matches it.
+_CRITICAL_KEYWORDS = (
+    "choking", "choke", "not breathing", "difficulty breathing",
+    "trouble breathing", "respiratory distress", "can't breathe",
+    "cannot breathe", "severe bleeding", "heavy bleeding", "profuse bleeding",
+    "unresponsive", "non-responsive", "not responding", "unconscious",
+    "collapsed", "collapse", "seizure", "seizing",
+)
+_URGENT_KEYWORDS = (
+    "severe pain", "trauma", "persistent vomiting", "deep cut", "deep wound",
+    "broken bone", "fracture", "hit by car", "swallowed", "bleeding",
+    "in a lot of pain",
+)
+_ROUTINE_KEYWORDS = (
+    "diarrhea", "mild limping", "limping", "itch", "itchy", "itchiness",
+    "scratching", "routine", "follow-up", "followup", "mild vomiting",
+    "rash", "fleas",
+)
+
+
+def _classify_mock_priority(description: str | None) -> Priority:
+    text = (description or "").lower()
+    if any(keyword in text for keyword in _CRITICAL_KEYWORDS):
+        return Priority.RED
+    if any(keyword in text for keyword in _URGENT_KEYWORDS):
+        return Priority.YELLOW
+    if any(keyword in text for keyword in _ROUTINE_KEYWORDS):
+        return Priority.GREEN
+    # No recognizable keyword — keeps the demo's usual variety instead of
+    # defaulting every unmatched case to the same priority every time.
+    return random.choice([Priority.RED, Priority.YELLOW, Priority.GREEN])
+
 # Strong references to in-flight background tasks (mock triage, see
 # _simulate_local_triage) — asyncio only holds a weak reference to a task
 # once its handle goes out of scope, which can let it get garbage-collected
@@ -200,15 +239,17 @@ async def _simulate_local_triage(triage_id: str, item: dict[str, Any]) -> None:
     Local-mode stand-in for the real worker/main.py pipeline (Gemini
     multimodal triage) — see the call site in create_upload_url for why
     this only ever runs when storage_backend == "local". Flips the case
-    PENDING -> COMPLETE with a randomized mock priority after a short
-    delay, persists it, and broadcasts it exactly like a real worker
-    would, so local testing/demoing sees a real transition instead of a
-    case stuck at PENDING forever.
+    PENDING -> COMPLETE after a short delay, with the priority chosen by
+    _classify_mock_priority from the owner's own description (falling
+    back to a random pick only when no keyword matches), persists it, and
+    broadcasts it exactly like a real worker would, so local
+    testing/demoing sees a real transition instead of a case stuck at
+    PENDING forever.
     """
     try:
         await asyncio.sleep(_MOCK_TRIAGE_DELAY_SECONDS)
 
-        priority = random.choice([Priority.RED, Priority.YELLOW, Priority.GREEN])
+        priority = _classify_mock_priority(item.get("pet_owner_description"))
         now = datetime.now(timezone.utc).isoformat()
         # Decimal, not float — DynamoDB's boto3 resource rejects native
         # float attributes (see the pet_age conversion above and

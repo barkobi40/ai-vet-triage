@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PawAlert — Live Dashboard</title>
+<link rel="icon" type="image/png" href="/static/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
@@ -455,9 +456,11 @@
   tbody tr:last-child { border-bottom: none; }
 
   .badge { display: inline-block; padding: 0.28rem 0.8rem; border-radius: 999px; font-weight: 700; font-size: 0.74rem; letter-spacing: 0.02em; }
-  .badge-RED { background: #FDECEA; color: #C0392B; }
-  .badge-YELLOW { background: #FFF6DE; color: #93720A; }
-  .badge-GREEN { background: #E6F4EA; color: #1E7B34; }
+  /* Clinical urgency colors — CRITICAL/URGENT/NON-URGENT (see
+     PRIORITY_LABELS below for the RED/YELLOW/GREEN -> label mapping). */
+  .badge-RED { background: #FEE2E2; color: #DC2626; }
+  .badge-YELLOW { background: #FFEDD5; color: #EA580C; }
+  .badge-GREEN { background: #DCFCE7; color: #16A34A; }
   .badge-PENDING { background: #EEF0F4; color: #5B6270; }
   .badge-status { background: #E3F2FD; color: #1565C0; }
 

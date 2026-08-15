@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PawAlert — Vet Command Center</title>
+<link rel="icon" type="image/png" href="/static/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
@@ -158,9 +159,13 @@
   .case-summary { font-size: 0.8rem; color: var(--text); margin-top: 0.4rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
   .badge { display: inline-block; padding: 0.22rem 0.65rem; border-radius: 999px; font-weight: 700; font-size: 0.68rem; letter-spacing: 0.02em; }
-  .badge-RED { background: #FDECEA; color: #C0392B; }
-  .badge-YELLOW { background: #FFF6DE; color: #93720A; }
-  .badge-GREEN { background: #E6F4EA; color: #1E7B34; }
+  /* Clinical urgency colors — CRITICAL/URGENT/NON-URGENT. The column
+     headers below already spell these out in plain text; case-card
+     badges only use the class for color (their text is the case status,
+     not the raw priority value — see renderColumn's badge markup). */
+  .badge-RED { background: #FEE2E2; color: #DC2626; }
+  .badge-YELLOW { background: #FFEDD5; color: #EA580C; }
+  .badge-GREEN { background: #DCFCE7; color: #16A34A; }
   .badge-PENDING { background: #EEF0F4; color: #5B6270; }
 
   /* ---- Case review modal ---- */
