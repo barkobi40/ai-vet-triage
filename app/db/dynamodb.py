@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError, NoCredenti
 
 from app.core.config import get_settings
 from app.db import local_store
-from app.db.schema import GSI1_NAME
+from app.db.schema import GSI1_NAME, GSI2_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +113,22 @@ async def query_gsi1(gsi1pk: str, *, scan_index_forward: bool = True) -> list[di
     except _AWS_UNAVAILABLE_EXCEPTIONS as exc:
         logger.warning("DynamoDB unavailable (%s); falling back to local in-memory store.", exc)
         return local_store.query_gsi1(gsi1pk, scan_index_forward=scan_index_forward)
+
+
+async def get_by_gsi2(gsi2pk: str) -> dict[str, Any] | None:
+    """Single-item lookup by GSI2 (account-by-email — see app/db/schema.py
+    and app/routers/auth.py). Unlike query_gsi1, GSI2PK alone is unique
+    per item, so this returns at most one account regardless of role."""
+    try:
+        table = get_table()
+        response = await asyncio.to_thread(
+            table.query,
+            IndexName=GSI2_NAME,
+            KeyConditionExpression=Key("GSI2PK").eq(gsi2pk),
+            Limit=1,
+        )
+        items = response.get("Items", [])
+        return items[0] if items else None
+    except _AWS_UNAVAILABLE_EXCEPTIONS as exc:
+        logger.warning("DynamoDB unavailable (%s); falling back to local in-memory store.", exc)
+        return local_store.get_by_gsi2(gsi2pk)

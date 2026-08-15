@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI Vet-Triage — Vet Command Center</title>
+<title>PawAlert — Vet Command Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
@@ -23,6 +23,19 @@
     color: var(--text);
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+  /* See web/dashboard.html for why this is a fixed pseudo-element rather
+     than body's own background-image + opacity. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url('/static/img/background.jpg');
+    background-repeat: repeat;
+    background-size: 220px;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: -1;
+  }
   .hidden { display: none !important; }
 
   header.topnav {
@@ -34,7 +47,10 @@
     padding: 1.1rem 2.5rem;
   }
   .brand { display: flex; align-items: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 900; }
-  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  /* See web/dashboard.html for why this is a pre-processed white asset
+     rather than a CSS filter. */
+  .brand .brand-logo { max-height: 40px; width: auto; object-fit: contain; }
+  .brand .brand-suffix { font-weight: 700; }
   .header-right { display: flex; align-items: center; gap: 1.5rem; }
   .vet-widget { color: #C9D1E0; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
   header.topnav a { color: #C9D1E0; text-decoration: none; font-weight: 700; font-size: 0.85rem; }
@@ -259,7 +275,7 @@
 <body>
 
   <header class="topnav">
-    <div class="brand"><span class="dot"></span>AI Vet-Triage — Vet Portal</div>
+    <div class="brand"><img class="brand-logo" src="/static/img/logo.png" alt="PawAlert" /><span class="brand-suffix">— Vet Portal</span></div>
     <div class="header-right">
       <div id="vetWidget" class="vet-widget"></div>
       <a href="/dashboard">Owner View</a>
@@ -278,15 +294,15 @@
 
     <div class="queue-columns">
       <div class="queue-column red">
-        <div class="queue-column-header"><span>RED · Emergency</span><span class="count" id="redCount">0</span></div>
+        <div class="queue-column-header"><span>CRITICAL · Emergency</span><span class="count" id="redCount">0</span></div>
         <div class="queue-column-body" id="redColumn"><div class="queue-empty">No emergency cases</div></div>
       </div>
       <div class="queue-column yellow">
-        <div class="queue-column-header"><span>YELLOW · Urgent</span><span class="count" id="yellowCount">0</span></div>
+        <div class="queue-column-header"><span>URGENT · Prompt Attention</span><span class="count" id="yellowCount">0</span></div>
         <div class="queue-column-body" id="yellowColumn"><div class="queue-empty">No urgent cases</div></div>
       </div>
       <div class="queue-column green">
-        <div class="queue-column-header"><span>GREEN · Non-Emergency</span><span class="count" id="greenCount">0</span></div>
+        <div class="queue-column-header"><span>NON-URGENT · Routine Care</span><span class="count" id="greenCount">0</span></div>
         <div class="queue-column-body" id="greenColumn"><div class="queue-empty">No routine cases</div></div>
       </div>
       <div class="queue-column pending">
@@ -386,11 +402,22 @@
       };
     }
 
-    // ---- Priority queue state.
+    // ---- Priority queue state. Strictly scoped to this vet's own
+    // clinic — a case with no vet_id, or a different one, is never added
+    // here, whether it arrives via the initial fetch or a live WebSocket
+    // push (see isMine()/upsertCase() below). This is data-scoping for
+    // demo purposes, not real access control: there's no authentication
+    // backing vetSession, so it only stops the UI from *displaying*
+    // another clinic's cases, not a determined client from requesting
+    // them directly from the API.
     const cases = new Map(); // triage_id -> latest known full case snapshot
 
+    function isMine(c) {
+      return vetSession && c.vet_id === vetSession.vetId;
+    }
+
     function upsertCase(update) {
-      if (!update.triage_id) return;
+      if (!update.triage_id || !isMine(update)) return;
       cases.set(update.triage_id, { ...(cases.get(update.triage_id) || {}), ...update });
       renderQueue();
     }
@@ -398,22 +425,18 @@
     // Populates the queue with every existing case on page load/refresh —
     // without this, the queue only ever reflected live WebSocket pushes
     // from the moment the page happened to be open, so a refresh silently
-    // dropped every case that arrived before it. Fetches everything (no
-    // owner_id/vet_id filter) since the vet queue always shows all cases,
-    // highlighting — not filtering to — this vet's own via isAssignedToMe().
+    // dropped every case that arrived before it. Scoped server-side via
+    // vet_id (see GET /api/v1/triage in app/routers/triage.py) so this
+    // vet never even receives another clinic's cases in the response.
     async function loadExistingCases() {
       try {
-        const response = await fetch("/api/v1/triage");
+        const response = await fetch(`/api/v1/triage?vet_id=${encodeURIComponent(vetSession.vetId)}`);
         if (!response.ok) return;
         const { cases: fetched } = await response.json();
         fetched.forEach(upsertCase);
       } catch {
         // Best effort — live WebSocket updates for new cases still work.
       }
-    }
-
-    function isAssignedToMe(c) {
-      return vetSession && c.vet_id && c.vet_id === vetSession.vetId;
     }
 
     function renderQueue() {
@@ -423,15 +446,7 @@
         buckets[bucket].push(c);
       }
       for (const key of Object.keys(buckets)) {
-        // Cases assigned to this vet's own clinic float to the top of
-        // their priority column (still grouped by urgency first — a RED
-        // case elsewhere doesn't get pushed below a GREEN one of mine),
-        // then newest-first within that.
-        buckets[key].sort((a, b) => {
-          const assignedDiff = Number(isAssignedToMe(b)) - Number(isAssignedToMe(a));
-          if (assignedDiff !== 0) return assignedDiff;
-          return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
-        });
+        buckets[key].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
       }
       renderColumn("redColumn", "redCount", buckets.RED, "No emergency cases");
       renderColumn("yellowColumn", "yellowCount", buckets.YELLOW, "No urgent cases");
@@ -458,12 +473,10 @@
           ? `<strong>Vet:</strong> ${c.vet_response}`
           : (c.summary || c.pet_owner_description || "");
 
-        const assignedToMe = isAssignedToMe(c);
         const card = document.createElement("button");
         card.type = "button";
-        card.className = assignedToMe ? "case-card assigned-to-me" : "case-card";
+        card.className = "case-card";
         card.innerHTML = `
-          ${assignedToMe ? `<span class="assigned-badge">Your Patient</span>` : ""}
           <div class="case-card-top">
             <span class="badge badge-${c.priority || "PENDING"}">${c.status || "PENDING"}</span>
             <span class="case-time">${time}</span>
@@ -507,8 +520,7 @@
         profileField("Pet", c.pet_name) +
         profileField("Species", c.species) +
         profileField("Age", c.pet_age != null ? `${c.pet_age} y/o` : null) +
-        profileField("Assigned Clinic", c.clinic_name) +
-        profileField("Assigned to me?", isAssignedToMe(c) ? "Yes" : "No");
+        profileField("Assigned Clinic", c.clinic_name);
 
       const riskFactorsHtml = Array.isArray(c.risk_factors) && c.risk_factors.length
         ? `<ul class="review-risk-list">${c.risk_factors.map((r) => `<li>${r}</li>`).join("")}</ul>`
@@ -565,26 +577,20 @@
 
     sendVetUpdateBtn.addEventListener("click", async () => {
       if (!currentTriageId) return;
-      const existing = cases.get(currentTriageId) || {};
 
-      // Send the *full* known snapshot, not just the changed fields — both
-      // this page (on receiving its own broadcast back) and the owner's
-      // dashboard render a whole-row replace keyed by triage_id, so a
-      // partial payload here would blank out summary/owner/pet fields on
-      // whichever table re-renders it.
-      const payload = {
-        ...existing,
-        status: vetStatusSelect.value,
-        vet_response: vetResponseText.value.trim(),
-        updated_at: new Date().toISOString(),
-      };
-
+      // Persists to storage (not just a WebSocket broadcast) so the
+      // response survives a refresh on either dashboard — see
+      // PATCH /{triage_id}/vet-response in app/routers/triage.py, which
+      // does the read-merge-write and broadcasts the result itself.
       sendVetUpdateBtn.disabled = true;
       try {
-        const response = await fetch("/ws/broadcast", {
-          method: "POST",
+        const response = await fetch(`/api/v1/triage/${currentTriageId}/vet-response`, {
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            status: vetStatusSelect.value,
+            vet_response: vetResponseText.value.trim(),
+          }),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();

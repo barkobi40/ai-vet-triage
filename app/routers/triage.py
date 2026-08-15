@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from botocore.exceptions import ClientError, NoCredentialsError
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import Response
 
 from app.core.config import get_settings
 from app.db import dynamodb, schema
@@ -20,9 +21,12 @@ from app.models.triage import (
     TriageStatus,
     UploadUrlRequest,
     UploadUrlResponse,
+    VetResponseRequest,
+    VetResponseResult,
     VideoUrlResponse,
 )
 from app.services import local_storage
+from app.services.medical_record_pdf import build_medical_record_pdf
 from app.services.pubsub import publish_triage_update
 from app.services.s3 import generate_presigned_download_url, generate_presigned_upload_url
 from app.ws.manager import manager
@@ -42,6 +46,23 @@ _S3_UNAVAILABLE_EXCEPTIONS = (NoCredentialsError, ClientError)
 # "AI Analyzing..." step the frontend already shows, short enough that a
 # demo isn't left staring at PENDING.
 _MOCK_TRIAGE_DELAY_SECONDS = 2.5
+
+# Professional-sounding, priority-specific stand-ins for the mock triage
+# result (see _simulate_local_triage) — deliberately free of any "mock" /
+# "local-mode" / "no AWS" wording, since this text is user-facing on both
+# dashboards. The real disclaimer (DISCLAIMER_TEXT, shown on every case
+# regardless of mock vs. real) is what actually discloses this is an
+# AI-generated suggestion requiring human confirmation.
+_MOCK_RISK_FACTOR_BY_PRIORITY = {
+    Priority.RED: "Reported symptoms may indicate a time-sensitive condition requiring prompt evaluation.",
+    Priority.YELLOW: "Reported symptoms warrant timely veterinary attention.",
+    Priority.GREEN: "Reported symptoms appear non-urgent but should be monitored for any change.",
+}
+_MOCK_NEXT_STEP_BY_PRIORITY = {
+    Priority.RED: "Seek emergency veterinary care as soon as possible.",
+    Priority.YELLOW: "Schedule a veterinary visit within the next 24 hours.",
+    Priority.GREEN: "Monitor at home and consult a veterinarian if symptoms persist or worsen.",
+}
 
 # Strong references to in-flight background tasks (mock triage, see
 # _simulate_local_triage) — asyncio only holds a weak reference to a task
@@ -193,16 +214,16 @@ async def _simulate_local_triage(triage_id: str, item: dict[str, Any]) -> None:
         # float attributes (see the pet_age conversion above and
         # worker/main.py's _dynamo_safe_result for the same constraint).
         mock_confidence = Decimal("0.72")
+        description = (item.get("pet_owner_description") or "").strip().rstrip(".")
+        symptom_text = description[:160] if description else "symptoms reported by the pet owner"
         mock_result = {
             "priority": priority.value,
             "confidence": mock_confidence,
             "summary": (
-                f'[Local-mode mock triage — no AWS/Gemini configured] Based on "'
-                f'{(item.get("pet_owner_description") or "")[:160]}", this case was given a '
-                f"simulated {priority.value} priority for local testing."
+                f"Initial AI Assessment: {symptom_text}. Evaluated for urgency and flagged for veterinary review."
             ),
-            "risk_factors": ["Mock triage result — real AI assessment requires AWS + a configured Gemini API key."],
-            "next_steps": ["Have a licensed vet review this case before taking any clinical action."],
+            "risk_factors": [_MOCK_RISK_FACTOR_BY_PRIORITY[priority]],
+            "next_steps": [_MOCK_NEXT_STEP_BY_PRIORITY[priority]],
             "species_detected": item.get("species") or "Unknown",
             "requires_human_review": True,
             "disclaimer": DISCLAIMER_TEXT,
@@ -268,8 +289,41 @@ def _item_to_case_summary(item: dict[str, Any]) -> CaseSummary:
         risk_factors=triage_result.get("risk_factors"),
         next_steps=triage_result.get("next_steps"),
         requires_human_review=triage_result.get("requires_human_review"),
+        vet_response=item.get("vet_response"),
         updated_at=item.get("updated_at"),
     )
+
+
+@router.patch("/{triage_id}/vet-response", response_model=VetResponseResult)
+async def submit_vet_response(triage_id: str, payload: VetResponseRequest) -> VetResponseResult:
+    """
+    Persists the vet dashboard's "Send Update to Pet Owner" action — this
+    used to only broadcast over WebSocket (see git history), which meant a
+    vet's response never survived a page refresh on either dashboard.
+    Fetches the current item, applies the vet's status/response on top of
+    it, and writes the whole thing back — same read-modify-write pattern
+    as _simulate_local_triage, and works under the local in-memory
+    fallback the same way (see app/db/dynamodb.py).
+    """
+    item = await dynamodb.get_item(schema.triage_pk(triage_id), schema.TRIAGE_SK)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    updated_item = {
+        **item,
+        "status": payload.status,
+        "vet_response": payload.vet_response,
+        "updated_at": now,
+    }
+    await dynamodb.put_item(updated_item)
+
+    case_summary = _item_to_case_summary(updated_item)
+    broadcast_payload = case_summary.model_dump()
+    await manager.broadcast(broadcast_payload)
+    await publish_triage_update(broadcast_payload)
+
+    return VetResponseResult(case=case_summary, recipients=manager.connection_count)
 
 
 @router.get("", response_model=CaseListResponse)
@@ -282,10 +336,13 @@ async def list_cases(owner_id: str | None = None, vet_id: str | None = None) -> 
     this merges all 4 priority partitions (a handful of queries at this
     project's demo scale) and filters by owner_id/vet_id in Python if
     given. owner_id scopes the pet-owner dashboard to "this browser's
-    cases" (see CaseSummary/UploadUrlRequest.owner_id — there's no real
-    auth in this demo); vet_id is unused by the vet dashboard today (it
-    fetches everything and highlights its own cases client-side, same as
-    the live WS feed) but is offered for the same filtering symmetry.
+    cases"; vet_id strictly scopes the vet dashboard to cases assigned to
+    that vet/clinic (see web/vet_dashboard.html's loadExistingCases) — a
+    case with no vet_id assigned isn't visible to any vet queue, matching
+    "only cases explicitly assigned to their clinic." Neither filter is a
+    real security boundary (there's no authentication in this demo, so a
+    client could request any owner_id/vet_id) — it's data-scoping, not
+    access control.
     """
     items: list[dict[str, Any]] = []
     for priority in (Priority.PENDING, Priority.RED, Priority.YELLOW, Priority.GREEN):
@@ -297,6 +354,35 @@ async def list_cases(owner_id: str | None = None, vet_id: str | None = None) -> 
         items = [i for i in items if i.get("vet_id") == vet_id]
 
     return CaseListResponse(cases=[_item_to_case_summary(i) for i in items])
+
+
+@router.get("/medical-record")
+async def download_medical_record(owner_id: str) -> Response:
+    """
+    The pet owner dashboard's "Medical Record" button: every case on file
+    for this owner_id, as a downloadable PDF (symptoms, AI assessment,
+    vet responses) — see app/services/medical_record_pdf.py. Reuses the
+    same priority-partition merge as list_cases, since there's still no
+    dedicated "list everything" index (see app/db/schema.py).
+    """
+    items: list[dict[str, Any]] = []
+    for priority in (Priority.PENDING, Priority.RED, Priority.YELLOW, Priority.GREEN):
+        items.extend(await dynamodb.query_gsi1(schema.priority_gsi1pk(priority.value), scan_index_forward=False))
+    items = [i for i in items if i.get("owner_id") == owner_id]
+    # Chronological (oldest first) reads better as a printed record than
+    # the dashboards' newest-first live queue ordering.
+    items.sort(key=lambda i: i.get("created_at") or i.get("updated_at") or "")
+
+    cases = [_item_to_case_summary(i) for i in items]
+    owner_name = items[0].get("owner_name") if items else None
+    pet_name = items[0].get("pet_name") if items else None
+    pdf_bytes = build_medical_record_pdf(cases, owner_name=owner_name, pet_name=pet_name)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="medical-record-{owner_id}.pdf"'},
+    )
 
 
 @router.put("/{triage_id}/upload-local", status_code=status.HTTP_204_NO_CONTENT)

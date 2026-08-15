@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI Vet-Triage — Live Dashboard</title>
+<title>PawAlert — Live Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
@@ -25,6 +25,22 @@
        looks clean if that request fails or is blocked. */
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+  /* Faint tiled paw-print pattern behind all content — a fixed, negative-
+     z-index layer rather than body's own background-image + opacity, so
+     the opacity applies only to the pattern itself and never to any
+     foreground text/contrast. z-index: -1 keeps it behind normal-flow
+     content without needing to touch every other element's stacking. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url('/static/img/background.jpg');
+    background-repeat: repeat;
+    background-size: 220px;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: -1;
+  }
   .hidden { display: none !important; }
 
   /* ---- Header / nav ---- */
@@ -37,7 +53,20 @@
     padding: 1.1rem 2.5rem;
   }
   .brand { display: flex; align-items: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.01em; }
-  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  /* logo.png is navy-on-transparent — brightness(0) flattens it to solid
+     black (alpha untouched), invert(1) flips that to solid white, so it
+     reads clearly against the dark navy header without needing a
+     separate white-variant asset. */
+  /* logo.png is pre-processed (see static/img/logo.png — generated from
+     .claude/logo.png by keying its white background out to real alpha
+     transparency and recoloring the mark to solid white, since the
+     source file had an *opaque* white background baked into its pixels,
+     not transparency — a plain CSS filter couldn't fix that: brightness(0)
+     invert(1) on an opaque white rectangle just produces another opaque
+     white rectangle, which was the original "solid white box" bug). No
+     CSS filter needed now — the asset itself is already the right color. */
+  .brand .brand-logo { max-height: 40px; width: auto; object-fit: contain; }
+  .brand .brand-suffix { font-weight: 700; }
   .header-right { display: flex; align-items: center; gap: 1.5rem; }
   .profile-widget { color: #C9D1E0; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
   nav.links { display: flex; align-items: center; gap: 1.75rem; }
@@ -452,13 +481,16 @@
 <body>
 
   <header class="topnav">
-    <div class="brand"><span class="dot"></span>AI Vet-Triage</div>
+    <div class="brand"><img class="brand-logo" src="/static/img/logo.png" alt="PawAlert" /></div>
     <div class="header-right">
       <div id="profileWidget" class="profile-widget"></div>
       <nav class="links">
         <button type="button" class="nav-link" id="howItWorksBtn">How it works</button>
-        <a href="#" class="cta">Connect</a>
+        <a href="#" class="cta" id="connectCta">Connect</a>
         <button type="button" class="vet-portal-btn" id="vetPortalBtn">Vet Portal Login</button>
+        <button type="button" class="nav-link hidden" id="medicalRecordBtn">Medical Record</button>
+        <button type="button" class="nav-link hidden" id="profileBtn">Profile</button>
+        <button type="button" class="vet-portal-btn hidden" id="ownerLogoutBtn">Log Out</button>
       </nav>
     </div>
   </header>
@@ -466,7 +498,7 @@
   <div id="howItWorksModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="howItWorksTitle">
     <div class="modal-card">
       <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">&times;</button>
-      <h2 id="howItWorksTitle">How AI Vet-Triage Works</h2>
+      <h2 id="howItWorksTitle">How PawAlert Works</h2>
       <div class="modal-steps">
         <div class="modal-step">
           <span class="icon-badge" aria-hidden="true">
@@ -492,7 +524,7 @@
           </span>
           <div>
             <strong>Step 2: AI Emergency Triage</strong>
-            <p>Our system evaluates symptoms in real-time, assigning a clinical priority level (RED, YELLOW, GREEN).</p>
+            <p>Our system evaluates symptoms in real-time, assigning a clinical urgency level (CRITICAL, URGENT, NON-URGENT).</p>
           </div>
         </div>
         <div class="modal-step">
@@ -519,7 +551,7 @@
 
       <!-- Step 1: role selection -->
       <div id="authStepRole">
-        <h2 id="authModalTitle">Welcome to AI Vet-Triage</h2>
+        <h2 id="authModalTitle">Welcome to PawAlert</h2>
         <p class="profile-subtitle">Choose how you'd like to continue.</p>
         <div class="role-picker">
           <button type="button" class="role-card" data-role="owner">
@@ -548,16 +580,32 @@
         </div>
       </div>
 
-      <!-- Step 2a: pet owner profile -->
+      <!-- Step 2a: pet owner register / login -->
       <div id="authStepOwner" class="hidden">
         <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
-        <h2>Complete Your Profile</h2>
-        <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
+        <div class="vet-tabs">
+          <button type="button" class="vet-tab active" id="ownerTabRegister" data-owner-tab="register">Register</button>
+          <button type="button" class="vet-tab" id="ownerTabLogin" data-owner-tab="login">Login</button>
+        </div>
+
         <form id="profileForm" novalidate>
+          <h2>Create Your Account</h2>
+          <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
           <div id="profileError" class="profile-error hidden"></div>
 
           <label for="ownerName">Owner's Full Name
             <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
+          </label>
+          <div class="auth-grid">
+            <label for="ownerEmail">Email
+              <input type="email" id="ownerEmail" autocomplete="email" required />
+            </label>
+            <label for="ownerPhone">Phone Number
+              <input type="tel" id="ownerPhone" autocomplete="tel" required />
+            </label>
+          </div>
+          <label for="ownerPassword">Password
+            <input type="password" id="ownerPassword" autocomplete="new-password" minlength="8" required />
           </label>
           <label for="petName">Pet's Name
             <input type="text" id="petName" name="petName" required />
@@ -604,7 +652,20 @@
             </select>
           </label>
 
-          <button type="submit" class="profile-submit">Continue to Dashboard</button>
+          <button type="submit" class="profile-submit">Register &amp; Continue to Dashboard</button>
+        </form>
+
+        <form id="ownerLoginForm" class="hidden" novalidate>
+          <h2>Pet Owner Login</h2>
+          <p class="profile-subtitle">Sign in to your account.</p>
+          <div id="ownerLoginError" class="profile-error hidden"></div>
+          <label for="ownerLoginEmail">Email
+            <input type="email" id="ownerLoginEmail" autocomplete="email" required />
+          </label>
+          <label for="ownerLoginPassword">Password
+            <input type="password" id="ownerLoginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="profile-submit">Log In</button>
         </form>
       </div>
 
@@ -618,7 +679,7 @@
 
         <form id="vetRegisterForm" novalidate>
           <h2>Veterinarian Registration</h2>
-          <p class="profile-subtitle">Create your clinic account to access the vet portal. (Demo only — no real credential storage; see code comments.)</p>
+          <p class="profile-subtitle">Create your clinic account to access the vet portal.</p>
           <div id="vetRegisterError" class="profile-error hidden"></div>
           <div class="auth-grid">
             <label for="vetFullName">Full Name
@@ -643,10 +704,13 @@
             <label for="vetRegUsername">Username
               <input type="text" id="vetRegUsername" autocomplete="username" required />
             </label>
-            <label for="vetRegPassword">Password
-              <input type="password" id="vetRegPassword" autocomplete="new-password" required />
+            <label for="vetRegEmail">Email
+              <input type="email" id="vetRegEmail" autocomplete="email" required />
             </label>
           </div>
+          <label for="vetRegPassword">Password
+            <input type="password" id="vetRegPassword" autocomplete="new-password" minlength="8" required />
+          </label>
           <button type="submit" class="profile-submit">Register &amp; Enter Vet Portal</button>
         </form>
 
@@ -654,16 +718,56 @@
           <h2>Veterinarian Login</h2>
           <p class="profile-subtitle">Sign in to your clinic account.</p>
           <div id="vetLoginError" class="profile-error hidden"></div>
-          <label for="vetLoginUsername">Username
-            <input type="text" id="vetLoginUsername" autocomplete="username" required />
+          <label for="vetLoginEmail">Email
+            <input type="email" id="vetLoginEmail" autocomplete="email" required />
           </label>
           <label for="vetLoginPassword">Password
             <input type="password" id="vetLoginPassword" autocomplete="current-password" required />
           </label>
           <button type="submit" class="profile-submit">Log In</button>
-          <button type="button" class="vet-demo-btn" id="vetDemoLoginBtn">Log in as Demo Vet</button>
+          <button type="button" class="vet-demo-btn" id="vetDemoLoginBtn">Log in as Demo Vet (no account needed)</button>
         </form>
       </div>
+    </div>
+  </div>
+
+  <div id="profileEditModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle">
+    <div class="modal-card auth-card">
+      <button type="button" class="modal-close" id="profileEditCloseBtn" aria-label="Close">&times;</button>
+      <h2 id="profileEditTitle">Your Profile</h2>
+      <p class="profile-subtitle">Update your details and your pet's details. Your clinic assignment is set when you first register and isn't changed here.</p>
+      <form id="profileEditForm" novalidate>
+        <div id="profileEditError" class="profile-error hidden"></div>
+
+        <label for="editOwnerName">Owner's Full Name
+          <input type="text" id="editOwnerName" required />
+        </label>
+        <div class="auth-grid">
+          <label for="editPetName">Pet's Name
+            <input type="text" id="editPetName" required />
+          </label>
+          <label for="editSpecies">Species
+            <select id="editSpecies" required>
+              <option value="Dog">Dog</option>
+              <option value="Cat">Cat</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+        </div>
+        <div class="auth-grid">
+          <label for="editBreed">Breed
+            <input type="text" id="editBreed" />
+          </label>
+          <label for="editPetAge">Age
+            <input type="number" id="editPetAge" min="0" step="0.5" required />
+          </label>
+        </div>
+        <label for="editPetWeight">Weight (kg)
+          <input type="number" id="editPetWeight" min="0" step="0.1" />
+        </label>
+
+        <button type="submit" class="profile-submit">Save Changes</button>
+      </form>
     </div>
   </div>
 
@@ -763,6 +867,16 @@
   </div>
 
   <script>
+    // Clinical urgency labels shown to users, in place of the internal
+    // RED/YELLOW/GREEN/PENDING priority values — those still drive the
+    // API contract, DynamoDB's GSI1PK partitioning, and the badge-${priority}
+    // CSS class names (see app/db/schema.py), so only the *displayed text*
+    // changes here, not the underlying data.
+    const PRIORITY_LABELS = { RED: "CRITICAL", YELLOW: "URGENT", GREEN: "NON-URGENT", PENDING: "PENDING" };
+    function priorityLabel(priority) {
+      return PRIORITY_LABELS[priority] || priority;
+    }
+
     // Derive the WS URL from the page's own origin so it works regardless
     // of host/port when served via GET /dashboard (the recommended way to
     // open this file — see app/main.py). Falls back to localhost:8000 if
@@ -812,7 +926,7 @@
         <td>${time}</td>
         <td class="triage-id">${update.triage_id || "-"}</td>
         <td><span class="badge badge-status">${update.status || "-"}</span></td>
-        <td><span class="badge badge-${priority}">${priority}</span></td>
+        <td><span class="badge badge-${priority}">${priorityLabel(priority)}</span></td>
         <td>${summary}</td>
       `;
 
@@ -856,20 +970,26 @@
       }
     }
 
-    // No real authentication exists in this demo — ownerId is the closest
-    // honest substitute for "the active session/user": a stable id
-    // generated once per browser and persisted alongside the rest of the
-    // profile, sent with every case submission, and used to scope
-    // GET /api/v1/triage?owner_id=... on page load (see loadExistingCases
-    // below). Backfills existing profiles saved before this field existed,
-    // so returning users don't lose case history just because they set up
-    // their profile before this change.
-    function ensureOwnerId(profile) {
-      if (!profile.ownerId) {
-        profile.ownerId = crypto.randomUUID();
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      }
-      return profile;
+    // Converts a real backend OwnerAccount (see app/models/owner.py) into
+    // this page's localStorage profile shape. ownerId now always comes
+    // from a real account created via POST /api/v1/owners/register or
+    // resolved via POST /api/v1/auth/login — there's no more
+    // locally-invented id, since a real account is what lets an owner log
+    // in from a different browser and see the same data.
+    function accountToProfile(account) {
+      return {
+        ownerId: account.owner_id,
+        ownerName: account.owner_name,
+        email: account.email,
+        phone: account.phone,
+        petName: account.pet_name,
+        species: account.species,
+        breed: account.breed,
+        petAge: account.pet_age,
+        petWeight: account.pet_weight,
+        vetId: account.vet_id,
+        clinicName: account.clinic_name,
+      };
     }
 
     async function loadExistingCases(ownerId) {
@@ -934,11 +1054,21 @@
     }
 
     function showDashboard(profile) {
-      ensureOwnerId(profile);
       renderProfileWidget(profile);
       closeAuthModal(true); // force-close even if opened non-dismissable
       dashboardView.classList.remove("hidden");
       loadExistingCases(profile.ownerId);
+
+      // Role-based nav: a logged-in pet owner has no business jumping
+      // into the vet portal from here — that surface is hidden, and
+      // "Profile" / "Log Out" take its place. "How it works" stays
+      // visible either way since it's contextual help, not a
+      // role/session control.
+      connectCta.classList.add("hidden");
+      vetPortalBtn.classList.add("hidden");
+      medicalRecordBtn.classList.remove("hidden");
+      profileBtn.classList.remove("hidden");
+      ownerLogoutBtn.classList.remove("hidden");
     }
 
     // Species picker: two clickable cards standing in for the old <select>.
@@ -992,22 +1122,28 @@
       }
     });
 
-    // ---- Unified auth modal: role selection -> owner profile / vet
-    // register|login. This is a clearly-labeled DEMO for the vet side —
-    // there's no real backend authentication for veterinarians. Neither
-    // the register nor the login form actually verifies a password
-    // against anything; the password fields exist for UI realism only,
-    // and are deliberately never persisted to localStorage (unlike the
-    // rest of the "account" fields) so nothing here could be mistaken for
-    // real credential storage, even a fake one.
+    // ---- Unified auth modal: role selection -> owner register|login / vet
+    // register|login. Both roles now have real backend accounts (see
+    // app/routers/owners.py, app/routers/vets.py, app/routers/auth.py) —
+    // passwords are hashed server-side (app/services/security.py) and
+    // login is a single endpoint that auto-detects which role an email
+    // belongs to, so either login form works regardless of which role
+    // card was clicked to get there.
     const VET_SESSION_KEY = "vetTriageVetSession";
-    const VET_ACCOUNTS_KEY = "vetTriageVetAccounts";
     const vetPortalBtn = document.getElementById("vetPortalBtn");
+    const connectCta = document.getElementById("connectCta");
+    const medicalRecordBtn = document.getElementById("medicalRecordBtn");
+    const profileBtn = document.getElementById("profileBtn");
+    const ownerLogoutBtn = document.getElementById("ownerLogoutBtn");
     const authModal = document.getElementById("authModal");
     const authCloseBtn = document.getElementById("authCloseBtn");
     const authStepRole = document.getElementById("authStepRole");
     const authStepOwner = document.getElementById("authStepOwner");
     const authStepVet = document.getElementById("authStepVet");
+    const ownerTabRegister = document.getElementById("ownerTabRegister");
+    const ownerTabLogin = document.getElementById("ownerTabLogin");
+    const ownerLoginForm = document.getElementById("ownerLoginForm");
+    const ownerLoginError = document.getElementById("ownerLoginError");
     const vetTabRegister = document.getElementById("vetTabRegister");
     const vetTabLogin = document.getElementById("vetTabLogin");
     const vetRegisterForm = document.getElementById("vetRegisterForm");
@@ -1040,20 +1176,146 @@
       vetPortalBtn.focus();
     }
 
-    function getVetAccounts() {
-      try {
-        return JSON.parse(localStorage.getItem(VET_ACCOUNTS_KEY) || "{}");
-      } catch {
-        return {};
-      }
-    }
-
     function enterVetPortal(session) {
       localStorage.setItem(VET_SESSION_KEY, JSON.stringify(session));
       window.location.href = "/vet";
     }
 
+    // Shared by both login forms (owner tab and vet tab) — login doesn't
+    // need to know in advance which role an email belongs to, the backend
+    // detects it (see app/routers/auth.py). Routes to whichever dashboard
+    // actually matches, even if the user picked the "wrong" tab to log in
+    // from.
+    async function attemptLogin(email, password) {
+      const response = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 401 ? "Invalid email or password." : `Request failed (HTTP ${response.status})`);
+      }
+      const body = await response.json();
+      if (body.role === "vet") {
+        enterVetPortal({ vetId: body.vet.vet_id, vetName: body.vet.vet_name, clinicName: body.vet.clinic_name });
+      } else {
+        const profile = accountToProfile(body.owner);
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        showDashboard(profile);
+      }
+    }
+
     vetPortalBtn.addEventListener("click", () => openAuthModal("vet", true));
+
+    ownerLogoutBtn.addEventListener("click", () => {
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
+      window.location.reload();
+    });
+
+    // "Profile" opens an edit modal for the owner's own details and pet
+    // details — there's no "Change Role" anymore; switching roles now
+    // only happens via Log Out (back to the mandatory Pet Owner vs.
+    // Veterinarian picker), not from inside an active owner session.
+    const profileEditModal = document.getElementById("profileEditModal");
+    const profileEditCloseBtn = document.getElementById("profileEditCloseBtn");
+    const profileEditForm = document.getElementById("profileEditForm");
+    const profileEditError = document.getElementById("profileEditError");
+
+    function openProfileEditModal() {
+      const profile = loadProfile();
+      if (!profile) return;
+      document.getElementById("editOwnerName").value = profile.ownerName || "";
+      document.getElementById("editPetName").value = profile.petName || "";
+      document.getElementById("editSpecies").value = profile.species || "Dog";
+      document.getElementById("editBreed").value = profile.breed || "";
+      document.getElementById("editPetAge").value = profile.petAge ?? "";
+      document.getElementById("editPetWeight").value = profile.petWeight ?? "";
+      profileEditError.classList.add("hidden");
+      profileEditModal.classList.remove("hidden");
+    }
+
+    function closeProfileEditModal() {
+      profileEditModal.classList.add("hidden");
+      profileBtn.focus();
+    }
+
+    profileBtn.addEventListener("click", openProfileEditModal);
+    profileEditCloseBtn.addEventListener("click", closeProfileEditModal);
+    profileEditModal.addEventListener("click", (event) => {
+      if (event.target === profileEditModal) closeProfileEditModal(); // clicked the backdrop
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !profileEditModal.classList.contains("hidden")) {
+        closeProfileEditModal();
+      }
+    });
+
+    profileEditForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const ownerName = document.getElementById("editOwnerName").value.trim();
+      const petName = document.getElementById("editPetName").value.trim();
+      const species = document.getElementById("editSpecies").value;
+      const breed = document.getElementById("editBreed").value.trim();
+      const petAgeRaw = document.getElementById("editPetAge").value;
+      const petAge = petAgeRaw === "" ? NaN : Number(petAgeRaw);
+      const petWeightRaw = document.getElementById("editPetWeight").value;
+      const petWeight = petWeightRaw === "" ? null : Number(petWeightRaw);
+
+      if (!ownerName || !petName || !species || Number.isNaN(petAge) || petAge < 0) {
+        profileEditError.textContent = "Please fill in every required field.";
+        profileEditError.classList.remove("hidden");
+        return;
+      }
+
+      const existing = loadProfile();
+      try {
+        // Persists to the real account (see PATCH /api/v1/owners/{id} in
+        // app/routers/owners.py), not just this browser's localStorage —
+        // so the edit is still there the next time this owner logs in,
+        // from this browser or any other.
+        const response = await fetch(`/api/v1/owners/${existing.ownerId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ owner_name: ownerName, pet_name: petName, species, breed, pet_age: petAge, pet_weight: petWeight }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const account = await response.json();
+        const profile = { ...existing, ...accountToProfile(account) };
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        renderProfileWidget(profile);
+        profileEditError.classList.add("hidden");
+        closeProfileEditModal();
+      } catch (err) {
+        profileEditError.textContent = `Could not save changes: ${err.message}`;
+        profileEditError.classList.remove("hidden");
+      }
+    });
+
+    medicalRecordBtn.addEventListener("click", async () => {
+      const profile = loadProfile();
+      if (!profile || !profile.ownerId) return;
+      const originalLabel = medicalRecordBtn.textContent;
+      medicalRecordBtn.disabled = true;
+      try {
+        const response = await fetch(`/api/v1/triage/medical-record?owner_id=${encodeURIComponent(profile.ownerId)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `medical-record-${(profile.petName || "pet").replace(/\s+/g, "-")}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        medicalRecordBtn.textContent = "Download failed";
+        setTimeout(() => { medicalRecordBtn.textContent = originalLabel; }, 3000);
+      } finally {
+        medicalRecordBtn.disabled = false;
+      }
+    });
+
     authCloseBtn.addEventListener("click", () => closeAuthModal(false));
     authModal.addEventListener("click", (event) => {
       if (event.target === authModal) closeAuthModal(false); // clicked the backdrop
@@ -1082,6 +1344,33 @@
     vetTabRegister.addEventListener("click", () => setVetTab("register"));
     vetTabLogin.addEventListener("click", () => setVetTab("login"));
 
+    function setOwnerTab(tab) {
+      ownerTabRegister.classList.toggle("active", tab === "register");
+      ownerTabLogin.classList.toggle("active", tab === "login");
+      profileForm.classList.toggle("hidden", tab !== "register");
+      ownerLoginForm.classList.toggle("hidden", tab !== "login");
+    }
+    ownerTabRegister.addEventListener("click", () => setOwnerTab("register"));
+    ownerTabLogin.addEventListener("click", () => setOwnerTab("login"));
+
+    ownerLoginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("ownerLoginEmail").value.trim();
+      const password = document.getElementById("ownerLoginPassword").value;
+      if (!email || !password) {
+        ownerLoginError.textContent = "Please enter both email and password.";
+        ownerLoginError.classList.remove("hidden");
+        return;
+      }
+      try {
+        await attemptLogin(email, password);
+        ownerLoginError.classList.add("hidden");
+      } catch (err) {
+        ownerLoginError.textContent = err.message;
+        ownerLoginError.classList.remove("hidden");
+      }
+    });
+
     vetRegisterForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const fullName = document.getElementById("vetFullName").value.trim();
@@ -1090,21 +1379,15 @@
       const phone = document.getElementById("vetPhone").value.trim();
       const licenseNumber = document.getElementById("vetLicenseNumber").value.trim();
       const username = document.getElementById("vetRegUsername").value.trim();
-      const password = document.getElementById("vetRegPassword").value; // read, never persisted
+      const email = document.getElementById("vetRegEmail").value.trim();
+      const password = document.getElementById("vetRegPassword").value;
 
-      if (!fullName || !clinicName || !clinicAddress || !phone || !licenseNumber || !username || !password) {
+      if (!fullName || !clinicName || !clinicAddress || !phone || !licenseNumber || !username || !email || !password) {
         vetRegisterError.textContent = "Please fill in every field before continuing.";
         vetRegisterError.classList.remove("hidden");
         return;
       }
-      vetRegisterError.classList.add("hidden");
 
-      // Register in the shared backend directory (visible to every pet
-      // owner's clinic dropdown, on any browser) — with a locally-generated
-      // fallback id if that call fails (e.g. no AWS configured), so
-      // registration still works fully offline, same as the rest of this
-      // demo degrades gracefully without AWS.
-      let vetId = null;
       try {
         const response = await fetch("/api/v1/vets/register", {
           method: "POST",
@@ -1116,63 +1399,48 @@
             phone,
             license_number: licenseNumber,
             username,
+            email,
+            password,
           }),
         });
-        if (response.ok) vetId = (await response.json()).vet_id;
-      } catch {
-        // fall through to the local-only id below
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(
+            response.status === 409
+              ? "An account with this email already exists — try logging in instead."
+              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
+          );
+        }
+        const { vet_id } = await response.json();
+        vetRegisterError.classList.add("hidden");
+        enterVetPortal({ vetId: vet_id, vetName: fullName, clinicName });
+      } catch (err) {
+        vetRegisterError.textContent = err.message;
+        vetRegisterError.classList.remove("hidden");
       }
-      if (!vetId) vetId = `local-${username}-${Date.now()}`;
-
-      const accounts = getVetAccounts();
-      accounts[username] = { vetId, fullName, clinicName, clinicAddress, phone, licenseNumber, username };
-      localStorage.setItem(VET_ACCOUNTS_KEY, JSON.stringify(accounts));
-
-      enterVetPortal({ vetId, vetName: fullName, clinicName, username, demo: true });
     });
 
     vetLoginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const username = document.getElementById("vetLoginUsername").value.trim();
-      const password = document.getElementById("vetLoginPassword").value; // demo only, never verified
-
-      if (!username || !password) {
-        vetLoginError.textContent = "Please enter both username and password.";
+      const email = document.getElementById("vetLoginEmail").value.trim();
+      const password = document.getElementById("vetLoginPassword").value;
+      if (!email || !password) {
+        vetLoginError.textContent = "Please enter both email and password.";
         vetLoginError.classList.remove("hidden");
         return;
       }
-
-      // Try the shared backend directory first (works across browsers),
-      // then fall back to this browser's local account list.
-      let account = null;
       try {
-        const response = await fetch("/api/v1/vets");
-        if (response.ok) {
-          const { vets } = await response.json();
-          const match = vets.find((v) => v.username === username);
-          if (match) {
-            account = {
-              vetId: match.vet_id,
-              fullName: match.vet_name,
-              clinicName: match.clinic_name,
-            };
-          }
-        }
-      } catch {
-        // fall through to the local lookup below
-      }
-      if (!account) account = getVetAccounts()[username];
-
-      if (!account) {
-        vetLoginError.textContent = "No demo account found for that username. Try registering, or use Demo Vet login below.";
+        await attemptLogin(email, password);
+        vetLoginError.classList.add("hidden");
+      } catch (err) {
+        vetLoginError.textContent = err.message;
         vetLoginError.classList.remove("hidden");
-        return;
       }
-      vetLoginError.classList.add("hidden");
-      enterVetPortal({ vetId: account.vetId, vetName: account.fullName, clinicName: account.clinicName, username, demo: true });
     });
 
     vetDemoLoginBtn.addEventListener("click", () => {
+      // Pure client-side shortcut — no real account behind "demo-vet",
+      // kept for zero-setup demoing alongside the real login above.
       enterVetPortal({ vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true });
     });
 
@@ -1264,10 +1532,13 @@
       }
     });
 
-    profileForm.addEventListener("submit", (event) => {
+    profileForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const ownerName = document.getElementById("ownerName").value.trim();
+      const email = document.getElementById("ownerEmail").value.trim();
+      const phone = document.getElementById("ownerPhone").value.trim();
+      const password = document.getElementById("ownerPassword").value;
       const petName = document.getElementById("petName").value.trim();
       const species = document.getElementById("species").value;
       const petAgeRaw = document.getElementById("petAge").value;
@@ -1275,23 +1546,50 @@
       const vetId = clinicSelect.value;
       const selectedClinic = currentClinicOptions.find((c) => c.vetId === vetId);
 
-      if (!ownerName || !petName || !species || Number.isNaN(petAge) || petAge < 0 || !vetId) {
+      if (!ownerName || !email || !phone || !password || !petName || !species || Number.isNaN(petAge) || petAge < 0 || !vetId) {
         profileError.textContent = "Please fill in every field before continuing.";
         profileError.classList.remove("hidden");
         return;
       }
-      profileError.classList.add("hidden");
+      if (password.length < 8) {
+        profileError.textContent = "Password must be at least 8 characters.";
+        profileError.classList.remove("hidden");
+        return;
+      }
 
-      const profile = {
-        ownerName,
-        petName,
-        species,
-        petAge,
-        vetId,
-        clinicName: selectedClinic ? selectedClinic.clinicName : null,
-      };
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      showDashboard(profile);
+      try {
+        const response = await fetch("/api/v1/owners/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner_name: ownerName,
+            email,
+            phone,
+            password,
+            pet_name: petName,
+            species,
+            pet_age: petAge,
+            vet_id: vetId,
+            clinic_name: selectedClinic ? selectedClinic.clinicName : null,
+          }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(
+            response.status === 409
+              ? "An account with this email already exists — try logging in instead."
+              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
+          );
+        }
+        const { account } = await response.json();
+        profileError.classList.add("hidden");
+        const profile = accountToProfile(account);
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        showDashboard(profile);
+      } catch (err) {
+        profileError.textContent = err.message;
+        profileError.classList.remove("hidden");
+      }
     });
 
     // On load: skip straight to the dashboard if a profile is already saved.

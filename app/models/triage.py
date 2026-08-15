@@ -101,7 +101,12 @@ class CaseSummary(BaseModel):
     rendering path they already use for live updates."""
 
     triage_id: str
-    status: TriageStatus
+    # Not strictly TriageStatus: a vet's status update (see
+    # VetResponseRequest below) overwrites this with free text from a
+    # fixed dropdown ("In Review", "Approved for Video Call", ...), the
+    # same value the dashboards already render as a plain display string —
+    # not one of the AI-pipeline's own PENDING/PROCESSING/COMPLETE stages.
+    status: str
     priority: Priority
     summary: Optional[str] = None
     pet_owner_description: Optional[str] = None
@@ -115,11 +120,25 @@ class CaseSummary(BaseModel):
     risk_factors: Optional[list[str]] = None
     next_steps: Optional[list[str]] = None
     requires_human_review: Optional[bool] = None
+    vet_response: Optional[str] = None
     updated_at: Optional[str] = None
 
 
 class CaseListResponse(BaseModel):
     cases: list[CaseSummary]
+
+
+class VetResponseRequest(BaseModel):
+    """Payload for PATCH /triage/{triage_id}/vet-response — the vet
+    dashboard's review-modal "Send Update to Pet Owner" action."""
+
+    status: str = Field(..., min_length=1, max_length=100)
+    vet_response: str = Field(default="", max_length=2000)
+
+
+class VetResponseResult(BaseModel):
+    case: CaseSummary
+    recipients: int
 
 
 # The exact disclaimer text the triage LLM must return. OpenAI's Structured

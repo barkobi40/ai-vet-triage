@@ -1,4 +1,4 @@
-# AI Vet-Triage
+# PawAlert (AI Vet-Triage)
 
 An asynchronous, event-driven platform for veterinary clinics. A pet owner uploads a video/audio
 clip plus a text description; the system transcribes and triages it with AI in the background,
@@ -128,17 +128,23 @@ separate backend per role, just two frontends subscribed to the same live feed.
   register/login flow (see below). Once past onboarding, owners get a **Submit New Case** widget
   (file + symptom notes) that calls the real `POST /api/v1/triage/upload-url` and `PUT`s straight
   to S3 — no mocking — plus the live-updating case table from earlier.
-- **`GET /vet`** (veterinarian): a "Vet Portal" button in the owner dashboard's header opens the
-  same auth modal at the vet step. Registration/login here is a **clearly-labeled demo**: account
-  fields (name, clinic, address, phone, license, username) persist to `localStorage`, but the
-  password field is read and discarded, never stored — there's no real backend authentication, and
-  nothing here should be mistaken for one. Logging in redirects to `/vet`, a priority queue
-  (RED/YELLOW/GREEN/Pending columns) fed by the same `/ws/triage` WebSocket the owner dashboard
-  uses. Clicking a case opens a review modal — pet/owner details, an embedded video/image player
-  (via a new presigned-GET endpoint, `GET /api/v1/triage/{id}/video-url`), the AI assessment, and a
-  response box. Sending a response `POST`s the *complete* case snapshot (not a partial diff) to
-  `/ws/broadcast`, which both this vet's own queue and any open owner dashboard receive live —
-  reusing the existing local-broadcast endpoint rather than adding new backend plumbing for it.
+- **`GET /vet`** (veterinarian): a "Vet Portal" button on the role-selection step opens the same
+  auth modal at the vet step. Both pet owners and vets have **real accounts**: email + password
+  (hashed server-side with PBKDF2-HMAC-SHA256, see `app/services/security.py` — never bcrypt/passlib,
+  to avoid a native-extension dependency), looked up via a `GSI2` email index shared by both entity
+  types (`app/db/schema.py`). `POST /api/v1/auth/login` is a single, role-agnostic endpoint: it finds
+  the account by email and auto-detects whether it's an owner or a vet, so either login form routes
+  correctly regardless of which one was used to sign in. A no-account-needed "Log in as Demo Vet"
+  shortcut is kept alongside real login purely for zero-setup demoing. Logging in as a vet redirects
+  to `/vet`, a priority queue (CRITICAL/URGENT/NON-URGENT/Pending columns, mapped from the
+  RED/YELLOW/GREEN/PENDING values DynamoDB and the API still use internally) fed by the same
+  `/ws/triage` WebSocket the owner dashboard uses, and **strictly filtered** to that vet's own
+  `vet_id` via `GET /api/v1/triage?vet_id=...` — a case with no vet assigned, or a different one,
+  never appears in another clinic's queue. Clicking a case opens a review modal — pet/owner details,
+  an embedded video/image player (`GET /api/v1/triage/{id}/video-url`), the AI assessment, and a
+  response box. Sending a response calls `PATCH /api/v1/triage/{id}/vet-response`, which persists it
+  to storage (not just a WebSocket broadcast) and then broadcasts the update, so it survives a page
+  refresh on either dashboard.
 - **Vet directory + case assignment.** A pet owner picks their clinic from a dropdown at
   registration, populated by `GET /api/v1/vets` — a genuine backend-persisted directory
   (`POST /api/v1/vets/register`), *not* another `localStorage`-only feature: vet accounts registered

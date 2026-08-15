@@ -27,12 +27,28 @@ dashboard's clinic-selection dropdown, via
 Query(GSI1PK == "VET_DIRECTORY"), sorted alphabetically by clinic name.
 The vet_id suffix on GSI1SK keeps keys unique even if two clinics share a
 name — DynamoDB requires GSI1PK+GSI1SK to be unique together.
+
+Owner accounts (a third entity type, same table):
+    PK = OWNER#{owner_id}          SK = METADATA
+
+GSI2 (account-by-email index — shared by both vet and owner accounts, the
+only two entity types with a login/email at all):
+    GSI2PK = EMAIL#{lowercased_email}   GSI2SK = ACCOUNT
+Access pattern: unified login (see app/routers/auth.py) looks up "the
+account with this email" via Query(GSI2PK == "EMAIL#...") regardless of
+whether it's a vet or an owner, then checks the item's own "role"
+attribute to know which. Email is treated as globally unique across both
+roles (one account per email either way), so this is a single-item
+lookup, not a paginated list like GSI1's directory/priority queries.
 """
 
 GSI1_NAME = "GSI1"
+GSI2_NAME = "GSI2"
 TRIAGE_SK = "METADATA"
 VET_SK = "METADATA"
+OWNER_SK = "METADATA"
 VET_DIRECTORY_GSI1PK = "VET_DIRECTORY"
+ACCOUNT_GSI2SK = "ACCOUNT"
 
 
 def triage_pk(triage_id: str) -> str:
@@ -53,3 +69,11 @@ def vet_pk(vet_id: str) -> str:
 
 def clinic_gsi1sk(clinic_name: str, vet_id: str) -> str:
     return f"CLINIC#{clinic_name}#{vet_id}"
+
+
+def owner_pk(owner_id: str) -> str:
+    return f"OWNER#{owner_id}"
+
+
+def email_gsi2pk(email: str) -> str:
+    return f"EMAIL#{email.strip().lower()}"

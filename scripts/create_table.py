@@ -19,7 +19,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from app.core.config import get_settings
-from app.db.schema import GSI1_NAME
+from app.db.schema import GSI1_NAME, GSI2_NAME
 
 
 def create_table() -> None:
@@ -42,6 +42,7 @@ def create_table() -> None:
             {"AttributeName": "SK", "AttributeType": "S"},
             {"AttributeName": "GSI1PK", "AttributeType": "S"},
             {"AttributeName": "GSI1SK", "AttributeType": "S"},
+            {"AttributeName": "GSI2PK", "AttributeType": "S"},
         ],
         KeySchema=[
             {"AttributeName": "PK", "KeyType": "HASH"},
@@ -55,7 +56,16 @@ def create_table() -> None:
                     {"AttributeName": "GSI1SK", "KeyType": "RANGE"},
                 ],
                 "Projection": {"ProjectionType": "ALL"},
-            }
+            },
+            {
+                # No range key: GSI2PK (email) alone is unique per account —
+                # see app/db/schema.py's email_gsi2pk().
+                "IndexName": GSI2_NAME,
+                "KeySchema": [
+                    {"AttributeName": "GSI2PK", "KeyType": "HASH"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            },
         ],
         # On-demand billing: triage upload volume is spiky and unpredictable,
         # so pay-per-request avoids provisioned-capacity guesswork.
