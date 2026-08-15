@@ -60,6 +60,8 @@ async def create_upload_url(payload: UploadUrlRequest) -> UploadUrlResponse:
         # TriageResult.confidence write; converting via str() avoids binary
         # float-precision artifacts in the resulting Decimal.
         "pet_age": Decimal(str(payload.pet_age)) if payload.pet_age is not None else None,
+        "vet_id": payload.vet_id,
+        "clinic_name": payload.clinic_name,
         "s3_bucket": settings.s3_bucket_name,
         "s3_key": s3_key,
         "content_type": payload.content_type,

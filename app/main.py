@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
-from app.routers import triage, ws
+from app.routers import triage, vets, ws
 from app.ws.listener import run_listener
 
 settings = get_settings()
@@ -31,6 +31,7 @@ app = FastAPI(
 )
 
 app.include_router(triage.router, prefix=settings.api_v1_prefix)
+app.include_router(vets.router, prefix=settings.api_v1_prefix)
 app.include_router(ws.router)  # /ws/triage — not versioned under api_v1_prefix by design
 
 

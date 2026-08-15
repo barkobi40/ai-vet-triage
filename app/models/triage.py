@@ -53,6 +53,12 @@ class UploadUrlRequest(BaseModel):
     owner_name: Optional[str] = Field(default=None, max_length=200)
     pet_name: Optional[str] = Field(default=None, max_length=200)
     pet_age: Optional[float] = Field(default=None, ge=0)
+    # Which vet/clinic (from the app.routers.vets directory) this owner
+    # selected at registration — lets the vet dashboard highlight cases
+    # assigned to the logged-in vet. Optional: a case with no vet_id just
+    # never highlights for anyone, it isn't dropped or misfiled.
+    vet_id: Optional[str] = Field(default=None, max_length=100)
+    clinic_name: Optional[str] = Field(default=None, max_length=200)
 
     @field_validator("content_type")
     @classmethod

@@ -151,6 +151,8 @@ def _case_context(item: dict[str, Any]) -> dict[str, Any]:
         "pet_age": float(pet_age) if pet_age is not None else None,
         "pet_owner_description": item.get("pet_owner_description"),
         "species": item.get("species"),
+        "vet_id": item.get("vet_id"),
+        "clinic_name": item.get("clinic_name"),
         "s3_bucket": item.get("s3_bucket"),
         "s3_key": item.get("s3_key"),
     }

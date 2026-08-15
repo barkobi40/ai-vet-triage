@@ -16,10 +16,23 @@ Records are created with GSI1PK = PRIORITY#PENDING before the AI worker has
 produced a classification, so they still surface in an "awaiting triage"
 dashboard view. The worker later updates GSI1PK to the real priority
 (RED/YELLOW/GREEN) once the AI assessment completes.
+
+Vet directory (a second entity type in the same table, same GSI1 — this is
+the point of single-table design: distinct item types are told apart by
+their own PK/SK and GSI key *values*, not by separate tables or indexes):
+    PK = VET#{vet_id}              SK = METADATA
+    GSI1PK = VET_DIRECTORY         GSI1SK = CLINIC#{clinic_name}#{vet_id}
+Access pattern: "list every registered vet/clinic" for the pet owner
+dashboard's clinic-selection dropdown, via
+Query(GSI1PK == "VET_DIRECTORY"), sorted alphabetically by clinic name.
+The vet_id suffix on GSI1SK keeps keys unique even if two clinics share a
+name — DynamoDB requires GSI1PK+GSI1SK to be unique together.
 """
 
 GSI1_NAME = "GSI1"
 TRIAGE_SK = "METADATA"
+VET_SK = "METADATA"
+VET_DIRECTORY_GSI1PK = "VET_DIRECTORY"
 
 
 def triage_pk(triage_id: str) -> str:
@@ -32,3 +45,11 @@ def priority_gsi1pk(priority: str) -> str:
 
 def created_at_gsi1sk(iso_timestamp: str) -> str:
     return f"CREATED_AT#{iso_timestamp}"
+
+
+def vet_pk(vet_id: str) -> str:
+    return f"VET#{vet_id}"
+
+
+def clinic_gsi1sk(clinic_name: str, vet_id: str) -> str:
+    return f"CLINIC#{clinic_name}#{vet_id}"

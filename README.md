@@ -139,11 +139,27 @@ separate backend per role, just two frontends subscribed to the same live feed.
   response box. Sending a response `POST`s the *complete* case snapshot (not a partial diff) to
   `/ws/broadcast`, which both this vet's own queue and any open owner dashboard receive live —
   reusing the existing local-broadcast endpoint rather than adding new backend plumbing for it.
+- **Vet directory + case assignment.** A pet owner picks their clinic from a dropdown at
+  registration, populated by `GET /api/v1/vets` — a genuine backend-persisted directory
+  (`POST /api/v1/vets/register`), *not* another `localStorage`-only feature: vet accounts registered
+  in one browser needed to be visible to an owner registering in a completely different one, which
+  `localStorage`'s strict per-origin isolation can never provide. It's still unauthenticated by
+  design (no password field on the registration model at all — see `app/models/vet.py`), just no
+  longer siloed per-browser. The directory is a second entity type sharing the triage table's GSI1
+  (`GSI1PK = VET_DIRECTORY`) rather than a separate table — the point of single-table design is that
+  distinct entity types are told apart by key *values*, not separate physical indexes. If no vets
+  are registered yet (or the backend call fails — e.g. no AWS configured), the dropdown falls back
+  to a hardcoded default clinic list, including a "Demo Clinic" entry whose `vetId` matches the "Log
+  in as Demo Vet" quick-login, so the whole assignment/highlighting flow demos correctly with zero
+  AWS setup. Selecting a clinic tags the case with `vet_id`/`clinic_name`, which the vet dashboard
+  uses to visually highlight ("Your Patient" badge, sorted to the top of its priority column) —
+  *not* filter — cases assigned to the logged-in vet, so a case never appears to silently vanish.
 - **What backing this required:** `UploadUrlRequest` gained optional `owner_name`/`pet_name`/
-  `pet_age` fields (stored in DynamoDB, `pet_age` converted to `Decimal` for boto3 and back to
-  `float` when published — the same float/Decimal issue already documented below), and
-  `ALLOWED_CONTENT_TYPES` grew to include `video/webm` and common image types so the owner-side
-  upload widget's accepted files actually match what the backend allows.
+  `pet_age`/`vet_id`/`clinic_name` fields (stored in DynamoDB, `pet_age` converted to `Decimal` for
+  boto3 and back to `float` when published — the same float/Decimal issue already documented
+  below), `ALLOWED_CONTENT_TYPES` grew to include `video/webm` and common image types so the
+  owner-side upload widget's accepted files actually match what the backend allows, and
+  `app/db/dynamodb.py` gained a generic `query_gsi1()` helper for the vet directory listing.
 - **No case-list/history API exists yet.** The vet queue reflects live cases from the moment the
   page is open, same as the owner table — there's no endpoint to fetch cases submitted before that.
   A real product would need one; out of scope for this pass.

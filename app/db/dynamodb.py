@@ -3,8 +3,10 @@ from functools import lru_cache
 from typing import Any
 
 import boto3
+from boto3.dynamodb.conditions import Key
 
 from app.core.config import get_settings
+from app.db.schema import GSI1_NAME
 
 
 @lru_cache
@@ -67,3 +69,18 @@ async def update_item(
 
     response = await asyncio.to_thread(table.update_item, **kwargs)
     return response["Attributes"]
+
+
+async def query_gsi1(gsi1pk: str, *, scan_index_forward: bool = True) -> list[dict[str, Any]]:
+    """Query GSI1 for every item sharing a given GSI1PK (e.g. the vet
+    directory's constant partition — see app/db/schema.py). Single-table
+    design means this same helper serves any current or future entity
+    type indexed on GSI1, not just one."""
+    table = get_table()
+    response = await asyncio.to_thread(
+        table.query,
+        IndexName=GSI1_NAME,
+        KeyConditionExpression=Key("GSI1PK").eq(gsi1pk),
+        ScanIndexForward=scan_index_forward,
+    )
+    return response.get("Items", [])

@@ -598,6 +598,11 @@
           <label for="petAge">Age
             <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
           </label>
+          <label for="clinicSelect">Select Your Veterinarian / Clinic
+            <select id="clinicSelect" name="clinicSelect" required>
+              <option value="" disabled selected>Loading clinics...</option>
+            </select>
+          </label>
 
           <button type="submit" class="profile-submit">Continue to Dashboard</button>
         </form>
@@ -851,9 +856,48 @@
       }
     }
 
+    // Clinic directory for the "Select Your Veterinarian / Clinic" field.
+    // vet-id "demo-vet" deliberately matches the "Log in as Demo Vet"
+    // quick-login below, so picking "Demo Clinic" here and logging in as
+    // Demo Vet on /vet demonstrates real case-highlighting without needing
+    // any vet to have actually registered first.
+    const DEFAULT_CLINICS = [
+      { vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic" },
+      { vetId: "clinic-sunrise", vetName: "Dr. Amara Chen", clinicName: "Sunrise Animal Hospital" },
+      { vetId: "clinic-northgate", vetName: "Dr. Miguel Torres", clinicName: "Northgate Veterinary Care" },
+    ];
+    const clinicSelect = document.getElementById("clinicSelect");
+    let currentClinicOptions = DEFAULT_CLINICS;
+
+    function renderClinicOptions(options) {
+      currentClinicOptions = options;
+      clinicSelect.innerHTML =
+        `<option value="" disabled selected>Select a clinic</option>` +
+        options.map((c) => `<option value="${c.vetId}">${c.clinicName} — ${c.vetName}</option>`).join("");
+    }
+
+    async function loadClinicOptions() {
+      try {
+        const response = await fetch("/api/v1/vets");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const { vets } = await response.json();
+        const options = vets.map((v) => ({ vetId: v.vet_id, vetName: v.vet_name, clinicName: v.clinic_name }));
+        // Registered vets first, then the always-available demo/default
+        // options, so the dropdown is never empty even with zero real
+        // registrations yet.
+        renderClinicOptions([...options, ...DEFAULT_CLINICS]);
+      } catch {
+        // No AWS configured, network hiccup, etc. — the clean default list
+        // the requirements explicitly call for as a fallback.
+        renderClinicOptions(DEFAULT_CLINICS);
+      }
+    }
+    loadClinicOptions();
+
     function renderProfileWidget(profile) {
-      profileWidget.textContent =
-        `Owner: ${profile.ownerName} | Pet: ${profile.petName} (${profile.species}, ${profile.petAge} y/o)`;
+      let text = `Owner: ${profile.ownerName} | Pet: ${profile.petName} (${profile.species}, ${profile.petAge} y/o)`;
+      if (profile.clinicName) text += ` | Clinic: ${profile.clinicName}`;
+      profileWidget.textContent = text;
     }
 
     function showDashboard(profile) {
@@ -1003,7 +1047,7 @@
     vetTabRegister.addEventListener("click", () => setVetTab("register"));
     vetTabLogin.addEventListener("click", () => setVetTab("login"));
 
-    vetRegisterForm.addEventListener("submit", (event) => {
+    vetRegisterForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const fullName = document.getElementById("vetFullName").value.trim();
       const clinicName = document.getElementById("vetClinicName").value.trim();
@@ -1020,14 +1064,39 @@
       }
       vetRegisterError.classList.add("hidden");
 
+      // Register in the shared backend directory (visible to every pet
+      // owner's clinic dropdown, on any browser) — with a locally-generated
+      // fallback id if that call fails (e.g. no AWS configured), so
+      // registration still works fully offline, same as the rest of this
+      // demo degrades gracefully without AWS.
+      let vetId = null;
+      try {
+        const response = await fetch("/api/v1/vets/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vet_name: fullName,
+            clinic_name: clinicName,
+            clinic_address: clinicAddress,
+            phone,
+            license_number: licenseNumber,
+            username,
+          }),
+        });
+        if (response.ok) vetId = (await response.json()).vet_id;
+      } catch {
+        // fall through to the local-only id below
+      }
+      if (!vetId) vetId = `local-${username}-${Date.now()}`;
+
       const accounts = getVetAccounts();
-      accounts[username] = { fullName, clinicName, clinicAddress, phone, licenseNumber, username };
+      accounts[username] = { vetId, fullName, clinicName, clinicAddress, phone, licenseNumber, username };
       localStorage.setItem(VET_ACCOUNTS_KEY, JSON.stringify(accounts));
 
-      enterVetPortal({ vetName: fullName, clinicName, username, demo: true });
+      enterVetPortal({ vetId, vetName: fullName, clinicName, username, demo: true });
     });
 
-    vetLoginForm.addEventListener("submit", (event) => {
+    vetLoginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const username = document.getElementById("vetLoginUsername").value.trim();
       const password = document.getElementById("vetLoginPassword").value; // demo only, never verified
@@ -1038,18 +1107,38 @@
         return;
       }
 
-      const account = getVetAccounts()[username];
+      // Try the shared backend directory first (works across browsers),
+      // then fall back to this browser's local account list.
+      let account = null;
+      try {
+        const response = await fetch("/api/v1/vets");
+        if (response.ok) {
+          const { vets } = await response.json();
+          const match = vets.find((v) => v.username === username);
+          if (match) {
+            account = {
+              vetId: match.vet_id,
+              fullName: match.vet_name,
+              clinicName: match.clinic_name,
+            };
+          }
+        }
+      } catch {
+        // fall through to the local lookup below
+      }
+      if (!account) account = getVetAccounts()[username];
+
       if (!account) {
         vetLoginError.textContent = "No demo account found for that username. Try registering, or use Demo Vet login below.";
         vetLoginError.classList.remove("hidden");
         return;
       }
       vetLoginError.classList.add("hidden");
-      enterVetPortal({ vetName: account.fullName, clinicName: account.clinicName, username, demo: true });
+      enterVetPortal({ vetId: account.vetId, vetName: account.fullName, clinicName: account.clinicName, username, demo: true });
     });
 
     vetDemoLoginBtn.addEventListener("click", () => {
-      enterVetPortal({ vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true });
+      enterVetPortal({ vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true });
     });
 
     // Submit New Case: calls the real backend (POST /api/v1/triage/upload-url,
@@ -1094,6 +1183,8 @@
             owner_name: profile ? profile.ownerName : null,
             pet_name: profile ? profile.petName : null,
             pet_age: profile ? profile.petAge : null,
+            vet_id: profile ? profile.vetId : null,
+            clinic_name: profile ? profile.clinicName : null,
           }),
         });
 
@@ -1145,15 +1236,24 @@
       const species = document.getElementById("species").value;
       const petAgeRaw = document.getElementById("petAge").value;
       const petAge = petAgeRaw === "" ? NaN : Number(petAgeRaw);
+      const vetId = clinicSelect.value;
+      const selectedClinic = currentClinicOptions.find((c) => c.vetId === vetId);
 
-      if (!ownerName || !petName || !species || Number.isNaN(petAge) || petAge < 0) {
+      if (!ownerName || !petName || !species || Number.isNaN(petAge) || petAge < 0 || !vetId) {
         profileError.textContent = "Please fill in every field before continuing.";
         profileError.classList.remove("hidden");
         return;
       }
       profileError.classList.add("hidden");
 
-      const profile = { ownerName, petName, species, petAge };
+      const profile = {
+        ownerName,
+        petName,
+        species,
+        petAge,
+        vetId,
+        clinicName: selectedClinic ? selectedClinic.clinicName : null,
+      };
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       showDashboard(profile);
     });

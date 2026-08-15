@@ -112,6 +112,30 @@
   .case-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(216, 27, 96, 0.1); }
   .case-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; }
   .case-card-top .case-time { color: var(--muted); font-size: 0.72rem; }
+
+  /* Cases assigned to the logged-in vet's own clinic — highlighted, not
+     filtered out, so nothing ever looks like it "went missing" from the
+     queue; see README for why highlighting was chosen over hard filtering. */
+  .case-card.assigned-to-me {
+    border-color: var(--accent);
+    border-width: 1.5px;
+    background: #FFF8FA;
+    box-shadow: 0 1px 6px rgba(216, 27, 96, 0.12);
+  }
+  .assigned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    margin-bottom: 0.4rem;
+  }
   .case-pet { font-weight: 900; font-size: 0.9rem; color: var(--navy); }
   .case-pet .case-species { font-weight: 400; color: var(--muted); }
   .case-owner { color: var(--muted); font-size: 0.78rem; margin-top: 0.1rem; }
@@ -373,6 +397,10 @@
       renderQueue();
     }
 
+    function isAssignedToMe(c) {
+      return vetSession && c.vet_id && c.vet_id === vetSession.vetId;
+    }
+
     function renderQueue() {
       const buckets = { RED: [], YELLOW: [], GREEN: [], PENDING: [] };
       for (const c of cases.values()) {
@@ -380,7 +408,15 @@
         buckets[bucket].push(c);
       }
       for (const key of Object.keys(buckets)) {
-        buckets[key].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+        // Cases assigned to this vet's own clinic float to the top of
+        // their priority column (still grouped by urgency first — a RED
+        // case elsewhere doesn't get pushed below a GREEN one of mine),
+        // then newest-first within that.
+        buckets[key].sort((a, b) => {
+          const assignedDiff = Number(isAssignedToMe(b)) - Number(isAssignedToMe(a));
+          if (assignedDiff !== 0) return assignedDiff;
+          return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+        });
       }
       renderColumn("redColumn", "redCount", buckets.RED, "No emergency cases");
       renderColumn("yellowColumn", "yellowCount", buckets.YELLOW, "No urgent cases");
@@ -407,16 +443,19 @@
           ? `<strong>Vet:</strong> ${c.vet_response}`
           : (c.summary || c.pet_owner_description || "");
 
+        const assignedToMe = isAssignedToMe(c);
         const card = document.createElement("button");
         card.type = "button";
-        card.className = "case-card";
+        card.className = assignedToMe ? "case-card assigned-to-me" : "case-card";
         card.innerHTML = `
+          ${assignedToMe ? `<span class="assigned-badge">Your Patient</span>` : ""}
           <div class="case-card-top">
             <span class="badge badge-${c.priority || "PENDING"}">${c.status || "PENDING"}</span>
             <span class="case-time">${time}</span>
           </div>
           <div class="case-pet">${petLabel}<span class="case-species">${speciesLabel}</span></div>
           ${ownerLabel ? `<div class="case-owner">${ownerLabel}</div>` : ""}
+          ${c.clinic_name ? `<div class="case-owner">Clinic: ${c.clinic_name}</div>` : ""}
           <div class="case-summary">${summary}</div>
         `;
         card.addEventListener("click", () => openReviewModal(c.triage_id));
@@ -452,7 +491,9 @@
         profileField("Owner", c.owner_name) +
         profileField("Pet", c.pet_name) +
         profileField("Species", c.species) +
-        profileField("Age", c.pet_age != null ? `${c.pet_age} y/o` : null);
+        profileField("Age", c.pet_age != null ? `${c.pet_age} y/o` : null) +
+        profileField("Assigned Clinic", c.clinic_name) +
+        profileField("Assigned to me?", isAssignedToMe(c) ? "Yes" : "No");
 
       const riskFactorsHtml = Array.isArray(c.risk_factors) && c.risk_factors.length
         ? `<ul class="review-risk-list">${c.risk_factors.map((r) => `<li>${r}</li>`).join("")}</ul>`

@@ -18,6 +18,7 @@ Usage:
     python scripts/simulate_triage_update.py --priority GREEN --status PROCESSING
     python scripts/simulate_triage_update.py --url http://localhost:9000
     python scripts/simulate_triage_update.py --priority RED --pet-name Rex --species Dog --pet-age 3
+    python scripts/simulate_triage_update.py --priority RED --vet-id demo-vet --clinic-name "Demo Clinic"
 """
 import argparse
 import json
@@ -43,6 +44,8 @@ def main(
     pet_name: str | None = None,
     species: str | None = None,
     pet_age: str | None = None,
+    vet_id: str | None = None,
+    clinic_name: str | None = None,
 ) -> None:
     payload = {
         "triage_id": str(uuid.uuid4()),
@@ -52,6 +55,8 @@ def main(
         "confidence": 0.91,
         "requires_human_review": priority == "RED",
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "vet_id": vet_id,
+        "clinic_name": clinic_name,
     }
 
     url = f"{base_url.rstrip('/')}/ws/broadcast"
@@ -90,5 +95,16 @@ if __name__ == "__main__":
     parser.add_argument("--pet-name", default=None, help="e.g. Rex — used in the summary text if all three --pet-* flags are given")
     parser.add_argument("--species", default=None, help="e.g. Dog")
     parser.add_argument("--pet-age", default=None, help="e.g. 3")
+    parser.add_argument("--vet-id", default=None, help="e.g. demo-vet — matches the Demo Vet quick-login's vetId")
+    parser.add_argument("--clinic-name", default=None, help="e.g. Demo Clinic")
     args = parser.parse_args()
-    main(args.priority, args.status, args.url, args.pet_name, args.species, args.pet_age)
+    main(
+        args.priority,
+        args.status,
+        args.url,
+        args.pet_name,
+        args.species,
+        args.pet_age,
+        args.vet_id,
+        args.clinic_name,
+    )
