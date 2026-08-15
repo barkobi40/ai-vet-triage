@@ -20,27 +20,23 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: #FFFFFF;
     color: var(--text);
+    /* Faint tiled paw-print pattern behind all content. This image is
+       pre-blended at 14% opacity against #FFFFFF (this page's own
+       background color) via PIL, rather than a separate low-opacity
+       layer — a `body::before` pseudo-element with `z-index: -1` looks
+       like the standard way to do this, but body's own opaque
+       background-color is an in-flow descendant that paints *after*
+       (on top of) any negative-z-index child in CSS's stacking order, so
+       that approach silently painted the pattern completely invisible
+       underneath the solid white background. Baking the fade into the
+       image itself sidesteps that stacking-context pitfall entirely: no
+       z-index, no separate layer, just a normal background-image. */
+    background: #FFFFFF url('/static/img/background-owner.jpg') repeat;
+    background-size: 220px;
     /* Lato from Google Fonts, with system fallbacks so the page still
        looks clean if that request fails or is blocked. */
     font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  /* Faint tiled paw-print pattern behind all content — a fixed, negative-
-     z-index layer rather than body's own background-image + opacity, so
-     the opacity applies only to the pattern itself and never to any
-     foreground text/contrast. z-index: -1 keeps it behind normal-flow
-     content without needing to touch every other element's stacking. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: url('/static/img/background.jpg');
-    background-repeat: repeat;
-    background-size: 220px;
-    opacity: 0.14;
-    pointer-events: none;
-    z-index: -1;
   }
   .hidden { display: none !important; }
 

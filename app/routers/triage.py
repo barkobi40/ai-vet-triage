@@ -81,7 +81,7 @@ _CRITICAL_KEYWORDS = (
 )
 _URGENT_KEYWORDS = (
     "severe pain", "trauma", "persistent vomiting", "deep cut", "deep wound",
-    "broken bone", "fracture", "hit by car", "swallowed", "bleeding",
+    "broken bone", "fracture", "hit by a car", "hit by car", "swallowed", "bleeding",
     "in a lot of pain",
 )
 _ROUTINE_KEYWORDS = (
