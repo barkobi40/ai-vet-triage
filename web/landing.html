@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PawAlert — AI-Powered Pet Symptom Triage</title>
+<link rel="icon" type="image/png" href="/static/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<script>
+  // Bypass the landing page entirely for a visitor who is already
+  // authenticated in this browser — runs before <body> renders (blocking
+  // <head> script) so there's no flash of marketing content before the
+  // redirect. location.replace (not .href) keeps this page out of
+  // history, so the back button from the dashboard doesn't bounce here.
+  (function () {
+    try {
+      if (localStorage.getItem("vetTriageProfile")) {
+        window.location.replace("/dashboard");
+      } else if (localStorage.getItem("vetTriageVetSession")) {
+        window.location.replace("/vet");
+      }
+    } catch {
+      // localStorage unavailable (private browsing, etc.) — fall through
+      // to the normal landing page, same as a first-time visitor.
+    }
+  })();
+</script>
+<style>
+  :root {
+    --accent: #D81B60;
+    --accent-dark: #AD1457;
+    --navy: #1A2B48;
+    --text: #1A2B48;
+    --muted: #6B7280;
+    --border: #ECECEF;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--text);
+    background: #FFFFFF url('/static/img/background-landing.jpg') repeat;
+    background-size: 260px;
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .hidden { display: none !important; }
+  a { color: inherit; }
+
+  /* ---- Header / nav ---- */
+  header.topnav {
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.55rem; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.01em; }
+  .brand .brand-logo { max-height: 40px; width: auto; object-fit: contain; }
+  nav.links { display: flex; align-items: center; gap: 1.75rem; }
+  nav.links a.nav-link {
+    color: #C9D1E0;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.88rem;
+    transition: color 0.15s;
+  }
+  nav.links a.nav-link:hover { color: #fff; }
+  .cta {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.15s;
+  }
+  .cta:hover { background: var(--accent-dark); }
+  .cta:focus-visible, .nav-link:focus-visible, .modal-close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---- Hero ---- */
+  .landing-hero {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 5rem 2rem 4.5rem;
+    text-align: center;
+  }
+  .eyebrow {
+    display: inline-block;
+    background: #FCE4EC;
+    color: var(--accent-dark);
+    font-weight: 800;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1.25rem;
+  }
+  .landing-hero h1 {
+    font-size: 2.6rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin: 0 0 1.1rem;
+    color: var(--navy);
+  }
+  .landing-hero .hero-subtitle {
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 auto 2rem;
+    max-width: 600px;
+  }
+  .hero-cta {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(216, 27, 96, 0.28);
+    transition: background 0.15s, transform 0.1s;
+  }
+  .hero-cta:hover { background: var(--accent-dark); transform: translateY(-1px); }
+  .hero-cta:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
+  .hero-note { margin: 1.25rem 0 0; color: var(--muted); font-size: 0.85rem; }
+
+  /* ---- How it works / flow section ---- */
+  .how-it-works-section {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1rem 2rem 4.5rem;
+  }
+  .section-heading { text-align: center; margin-bottom: 3rem; }
+  .section-heading h2 { font-size: 1.75rem; font-weight: 900; color: var(--navy); margin: 0 0 0.5rem; }
+  .section-heading p { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+  .flow-steps { display: flex; gap: 0; position: relative; }
+  .flow-steps::before {
+    content: "";
+    position: absolute;
+    top: 27px;
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .flow-step {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 0 1.5rem;
+  }
+  .flow-step-number {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 900;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.1rem;
+    box-shadow: 0 6px 16px rgba(216, 27, 96, 0.25);
+  }
+  .flow-step .icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #FCE4EC;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.9rem;
+  }
+  .flow-step .icon-badge svg { width: 22px; height: 22px; }
+  .flow-step h3 { font-size: 1.05rem; font-weight: 900; color: var(--navy); margin: 0 0 0.5rem; }
+  .flow-step p { color: var(--muted); font-size: 0.86rem; line-height: 1.5; margin: 0; }
+
+  /* ---- CTA band ---- */
+  .landing-cta-band {
+    background: var(--navy);
+    color: #fff;
+    text-align: center;
+    padding: 3.5rem 2rem;
+  }
+  .landing-cta-band h2 { font-size: 1.5rem; font-weight: 900; margin: 0 0 1.5rem; }
+
+  footer.note { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 2rem 1rem; }
+
+  /* ---- Unified auth modal (role selection -> owner profile / vet register|login) ---- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 43, 72, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+  }
+  .modal-card {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2.25rem 2.5rem 2rem;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(26, 43, 72, 0.25);
+  }
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #F3F4F6;
+    color: var(--navy);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-close:hover { background: #E5E7EB; }
+
+  .modal-card.auth-card { max-width: 520px; }
+  .auth-card h2 { margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 900; color: var(--navy); padding-right: 0; }
+  .auth-card .profile-subtitle { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
+  .auth-card label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 1.1rem; }
+  .auth-card input, .auth-card select {
+    display: block;
+    width: 100%;
+    margin-top: 0.4rem;
+    padding: 0.7rem 0.9rem;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--text);
+    background: #fff;
+  }
+  .auth-card input:focus, .auth-card select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.12);
+  }
+  .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+
+  .auth-back-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 1.1rem;
+  }
+  .auth-back-btn:hover { color: var(--navy); }
+
+  .role-picker { display: flex; gap: 1rem; margin: 1.5rem 0 0.5rem; }
+  .role-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .role-card:hover { border-color: var(--accent); background: #FCE4EC; transform: translateY(-2px); }
+  .role-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .role-card .icon-badge { width: 52px; height: 52px; }
+  .role-card .icon-badge svg { width: 26px; height: 26px; }
+  .role-card strong { font-size: 0.98rem; color: var(--navy); }
+  .role-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.35; }
+
+  .icon-badge {
+    border-radius: 50%;
+    background: #FCE4EC;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vet-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #F3F4F6; border-radius: 999px; padding: 0.25rem; }
+  .vet-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.55rem 0.5rem;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .vet-tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(26, 43, 72, 0.12); }
+
+  .profile-submit {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.85rem;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  .profile-submit:hover { background: var(--accent-dark); }
+  .profile-error {
+    background: #FDECEA;
+    color: #C0392B;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
+  }
+  .form-field-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+
+  .vet-demo-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 1.1rem;
+  }
+  .vet-demo-btn:hover { color: var(--navy); }
+
+  /* ---- Species picker ---- */
+  .species-picker { display: flex; gap: 0.85rem; margin-bottom: 1.1rem; }
+  .species-option {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1rem 0.5rem 0.85rem;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .species-option:hover { border-color: #D8DBE2; }
+  .species-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .species-option svg { width: 32px; height: 32px; }
+  .species-option .species-label { font-size: 0.85rem; font-weight: 700; }
+  .species-option.selected {
+    border-color: var(--accent);
+    background: #FCE4EC;
+    color: var(--accent-dark);
+  }
+  .species-option .species-check {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.7rem;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .species-option.selected .species-check { display: flex; }
+
+  @media (max-width: 720px) {
+    header.topnav { padding: 1rem 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+    nav.links { gap: 1rem; }
+    .landing-hero { padding: 3rem 1.25rem 3rem; }
+    .landing-hero h1 { font-size: 1.9rem; }
+    .how-it-works-section { padding: 0.5rem 1.25rem 3rem; }
+    .flow-steps { flex-direction: column; gap: 2.25rem; }
+    .flow-steps::before { display: none; }
+    .auth-card { padding: 1.75rem; }
+    .auth-grid { grid-template-columns: 1fr; }
+    .role-picker { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topnav">
+    <div class="brand"><img class="brand-logo" src="/static/img/logo.png" alt="PawAlert" /></div>
+    <div class="header-right">
+      <nav class="links">
+        <a href="#how-it-works" class="nav-link">How it works</a>
+        <button type="button" class="cta" id="getStartedBtn">Get Started / Log In</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="landing-hero">
+      <span class="eyebrow">AI-Powered Veterinary Triage</span>
+      <h1>Know how urgent your pet's symptoms are — in minutes, not hours.</h1>
+      <p class="hero-subtitle">Upload a quick video or photo of your pet, get an instant AI-generated assessment, and have it reviewed by a real veterinary clinic — all in one place.</p>
+      <button type="button" class="hero-cta" id="heroGetStartedBtn">Get Started / Log In</button>
+      <p class="hero-note">Free for pet owners &middot; Every case reviewed by a licensed clinic</p>
+    </section>
+
+    <section class="how-it-works-section" id="how-it-works">
+      <div class="section-heading">
+        <h2>How PawAlert Works</h2>
+        <p>From symptom to expert guidance in three simple steps.</p>
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-number">1</div>
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Upload</title>
+              <path d="M7 16a4 4 0 0 1-1-7.87A5.5 5.5 0 0 1 16.9 6.1 4.5 4.5 0 0 1 17 15h-1"/>
+              <path d="M12 12v9"/>
+              <path d="M9 15l3-3 3 3"/>
+            </svg>
+          </span>
+          <h3>Record &amp; Upload</h3>
+          <p>Upload a short video or photo of your pet describing the symptoms you're noticing.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-number">2</div>
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Heart with pulse</title>
+              <path d="M12 20 C12 20 3 14.5 3 8.5 C3 5.5 5.5 3.5 8 3.5 C9.8 3.5 11.3 4.6 12 6 C12.7 4.6 14.2 3.5 16 3.5 C18.5 3.5 21 5.5 21 8.5 C21 14.5 12 20 12 20 Z"/>
+              <path d="M6 11 L9 11 L10.5 8 L12.5 14 L14 11 L18 11"/>
+            </svg>
+          </span>
+          <h3>Instant AI Assessment</h3>
+          <p>Our AI analyzes the symptoms, evaluates urgency, and generates an initial clinical summary in moments.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-number">3</div>
+          <span class="icon-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Shield with checkmark</title>
+              <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"/>
+              <path d="M8.5 12 L11 14.5 L15.5 9.5"/>
+            </svg>
+          </span>
+          <h3>Veterinary Review</h3>
+          <p>Your assigned clinic reviews the case and sends updates and guidance straight back to you.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-cta-band">
+      <h2>Ready to get your pet the right care, faster?</h2>
+      <button type="button" class="hero-cta" id="bandGetStartedBtn">Get Started / Log In</button>
+    </section>
+  </main>
+
+  <footer class="note">PawAlert — AI-assisted triage, always reviewed by a licensed veterinary clinic.</footer>
+
+  <div id="authModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+    <div class="modal-card auth-card">
+      <button type="button" class="modal-close" id="authCloseBtn" aria-label="Close">&times;</button>
+
+      <!-- Step 1: role selection -->
+      <div id="authStepRole">
+        <h2 id="authModalTitle">Welcome to PawAlert</h2>
+        <p class="profile-subtitle">Choose how you'd like to continue.</p>
+        <div class="role-picker">
+          <button type="button" class="role-card" data-role="owner">
+            <span class="icon-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><title>Paw</title>
+                <ellipse cx="12" cy="16.2" rx="5" ry="4.2"/>
+                <ellipse cx="5.4" cy="10.2" rx="2" ry="2.6" transform="rotate(-20 5.4 10.2)"/>
+                <ellipse cx="9.6" cy="6.4" rx="2" ry="2.6" transform="rotate(-8 9.6 6.4)"/>
+                <ellipse cx="14.4" cy="6.4" rx="2" ry="2.6" transform="rotate(8 14.4 6.4)"/>
+                <ellipse cx="18.6" cy="10.2" rx="2" ry="2.6" transform="rotate(20 18.6 10.2)"/>
+              </svg>
+            </span>
+            <strong>Pet Owner</strong>
+            <span>Submit cases and track live triage updates</span>
+          </button>
+          <button type="button" class="role-card" data-role="vet">
+            <span class="icon-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Shield with checkmark</title>
+                <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"/>
+                <path d="M8.5 12 L11 14.5 L15.5 9.5"/>
+              </svg>
+            </span>
+            <strong>Veterinarian</strong>
+            <span>Review cases and respond to pet owners</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2a: pet owner register / login -->
+      <div id="authStepOwner" class="hidden">
+        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
+        <div class="vet-tabs">
+          <button type="button" class="vet-tab active" id="ownerTabRegister" data-owner-tab="register">Register</button>
+          <button type="button" class="vet-tab" id="ownerTabLogin" data-owner-tab="login">Login</button>
+        </div>
+
+        <form id="profileForm" novalidate>
+          <h2>Create Your Account</h2>
+          <p class="profile-subtitle">Tell us about you and your pet before you continue to your dashboard.</p>
+          <div id="profileError" class="profile-error hidden"></div>
+
+          <label for="ownerName">Owner's Full Name
+            <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
+          </label>
+          <div class="auth-grid">
+            <label for="ownerEmail">Email
+              <input type="email" id="ownerEmail" autocomplete="email" required />
+            </label>
+            <label for="ownerPhone">Phone Number
+              <input type="tel" id="ownerPhone" autocomplete="tel" required />
+            </label>
+          </div>
+          <label for="ownerPassword">Password
+            <input type="password" id="ownerPassword" autocomplete="new-password" minlength="8" required />
+          </label>
+          <label for="petName">Pet's Name
+            <input type="text" id="petName" name="petName" required />
+          </label>
+          <div>
+            <span class="form-field-label">Species</span>
+            <div class="species-picker" role="group" aria-label="Select species">
+              <button type="button" class="species-option" data-species="Dog" aria-pressed="false">
+                <span class="species-check" aria-hidden="true">&#10003;</span>
+                <svg viewBox="0 0 48 48" fill="none"><title>Dog</title>
+                  <path d="M14 20 C6 20 4 30 8 36 C11 40 16 38 16 32 L16 20 Z" fill="currentColor" opacity="0.9"/>
+                  <path d="M34 20 C42 20 44 30 40 36 C37 40 32 38 32 32 L32 20 Z" fill="currentColor" opacity="0.9"/>
+                  <ellipse cx="24" cy="24" rx="12" ry="11" fill="currentColor"/>
+                  <ellipse cx="24" cy="29" rx="6" ry="5" fill="#fff"/>
+                  <circle cx="24" cy="27" r="1.6" fill="currentColor"/>
+                  <circle cx="19" cy="21" r="1.6" fill="#fff"/>
+                  <circle cx="29" cy="21" r="1.6" fill="#fff"/>
+                </svg>
+                <span class="species-label">Dog</span>
+              </button>
+              <button type="button" class="species-option" data-species="Cat" aria-pressed="false">
+                <span class="species-check" aria-hidden="true">&#10003;</span>
+                <svg viewBox="0 0 48 48" fill="none"><title>Cat</title>
+                  <path d="M12 20 L8 8 L20 16 Z" fill="currentColor"/>
+                  <path d="M36 20 L40 8 L28 16 Z" fill="currentColor"/>
+                  <circle cx="24" cy="26" r="13" fill="currentColor"/>
+                  <ellipse cx="24" cy="30" rx="5" ry="3.5" fill="#fff"/>
+                  <path d="M24 27 L22 30 L26 30 Z" fill="currentColor"/>
+                  <ellipse cx="18" cy="24" rx="1.6" ry="2" fill="#fff"/>
+                  <ellipse cx="30" cy="24" rx="1.6" ry="2" fill="#fff"/>
+                  <path d="M8 28 L16 27 M8 32 L16 31 M40 28 L32 27 M40 32 L32 31" stroke="#fff" stroke-width="1"/>
+                </svg>
+                <span class="species-label">Cat</span>
+              </button>
+            </div>
+            <input type="hidden" id="species" name="species" />
+          </div>
+          <label for="petAge">Age
+            <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
+          </label>
+          <label for="clinicSelect">Select Your Veterinarian / Clinic
+            <select id="clinicSelect" name="clinicSelect" required>
+              <option value="" disabled selected>Loading clinics...</option>
+            </select>
+          </label>
+
+          <button type="submit" class="profile-submit">Register &amp; Continue to Dashboard</button>
+        </form>
+
+        <form id="ownerLoginForm" class="hidden" novalidate>
+          <h2>Pet Owner Login</h2>
+          <p class="profile-subtitle">Sign in to your account.</p>
+          <div id="ownerLoginError" class="profile-error hidden"></div>
+          <label for="ownerLoginEmail">Email
+            <input type="email" id="ownerLoginEmail" autocomplete="email" required />
+          </label>
+          <label for="ownerLoginPassword">Password
+            <input type="password" id="ownerLoginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="profile-submit">Log In</button>
+        </form>
+      </div>
+
+      <!-- Step 2b: veterinarian register / login -->
+      <div id="authStepVet" class="hidden">
+        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
+        <div class="vet-tabs">
+          <button type="button" class="vet-tab active" id="vetTabRegister" data-vet-tab="register">Register</button>
+          <button type="button" class="vet-tab" id="vetTabLogin" data-vet-tab="login">Login</button>
+        </div>
+
+        <form id="vetRegisterForm" novalidate>
+          <h2>Veterinarian Registration</h2>
+          <p class="profile-subtitle">Create your clinic account to access the vet portal.</p>
+          <div id="vetRegisterError" class="profile-error hidden"></div>
+          <div class="auth-grid">
+            <label for="vetFullName">Full Name
+              <input type="text" id="vetFullName" autocomplete="name" required />
+            </label>
+            <label for="vetClinicName">Hospital / Clinic Name
+              <input type="text" id="vetClinicName" required />
+            </label>
+          </div>
+          <label for="vetClinicAddress">Clinic Address
+            <input type="text" id="vetClinicAddress" autocomplete="street-address" required />
+          </label>
+          <div class="auth-grid">
+            <label for="vetPhone">Phone Number
+              <input type="tel" id="vetPhone" autocomplete="tel" required />
+            </label>
+            <label for="vetLicenseNumber">License Number
+              <input type="text" id="vetLicenseNumber" required />
+            </label>
+          </div>
+          <div class="auth-grid">
+            <label for="vetRegUsername">Username
+              <input type="text" id="vetRegUsername" autocomplete="username" required />
+            </label>
+            <label for="vetRegEmail">Email
+              <input type="email" id="vetRegEmail" autocomplete="email" required />
+            </label>
+          </div>
+          <label for="vetRegPassword">Password
+            <input type="password" id="vetRegPassword" autocomplete="new-password" minlength="8" required />
+          </label>
+          <button type="submit" class="profile-submit">Register &amp; Enter Vet Portal</button>
+        </form>
+
+        <form id="vetLoginForm" class="hidden" novalidate>
+          <h2>Veterinarian Login</h2>
+          <p class="profile-subtitle">Sign in to your clinic account.</p>
+          <div id="vetLoginError" class="profile-error hidden"></div>
+          <label for="vetLoginEmail">Email
+            <input type="email" id="vetLoginEmail" autocomplete="email" required />
+          </label>
+          <label for="vetLoginPassword">Password
+            <input type="password" id="vetLoginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="profile-submit">Log In</button>
+          <button type="button" class="vet-demo-btn" id="vetDemoLoginBtn">Log in as Demo Vet (no account needed)</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Shared session keys — must match web/dashboard.html and
+    // web/vet_dashboard.html exactly, since both read the same
+    // localStorage entries this page writes.
+    const PROFILE_STORAGE_KEY = "vetTriageProfile";
+    const VET_SESSION_KEY = "vetTriageVetSession";
+
+    // Converts a real backend OwnerAccount (see app/models/owner.py) into
+    // the localStorage profile shape the dashboard expects.
+    function accountToProfile(account) {
+      return {
+        ownerId: account.owner_id,
+        ownerName: account.owner_name,
+        email: account.email,
+        phone: account.phone,
+        petName: account.pet_name,
+        species: account.species,
+        breed: account.breed,
+        petAge: account.pet_age,
+        petWeight: account.pet_weight,
+        vetId: account.vet_id,
+        clinicName: account.clinic_name,
+      };
+    }
+
+    // Clinic directory for the "Select Your Veterinarian / Clinic" field.
+    // vet-id "demo-vet" deliberately matches the "Log in as Demo Vet"
+    // quick-login below.
+    const DEFAULT_CLINICS = [
+      { vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic" },
+      { vetId: "clinic-sunrise", vetName: "Dr. Amara Chen", clinicName: "Sunrise Animal Hospital" },
+      { vetId: "clinic-northgate", vetName: "Dr. Miguel Torres", clinicName: "Northgate Veterinary Care" },
+    ];
+    const clinicSelect = document.getElementById("clinicSelect");
+    let currentClinicOptions = DEFAULT_CLINICS;
+
+    function renderClinicOptions(options) {
+      currentClinicOptions = options;
+      clinicSelect.innerHTML =
+        `<option value="" disabled selected>Select a clinic</option>` +
+        options.map((c) => `<option value="${c.vetId}">${c.clinicName} — ${c.vetName}</option>`).join("");
+    }
+
+    async function loadClinicOptions() {
+      try {
+        const response = await fetch("/api/v1/vets");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const { vets } = await response.json();
+        const options = vets.map((v) => ({ vetId: v.vet_id, vetName: v.vet_name, clinicName: v.clinic_name }));
+        renderClinicOptions([...options, ...DEFAULT_CLINICS]);
+      } catch {
+        renderClinicOptions(DEFAULT_CLINICS);
+      }
+    }
+    loadClinicOptions();
+
+    // Species picker: two clickable cards standing in for a <select>. The
+    // selected value is written into the hidden #species input.
+    const speciesInput = document.getElementById("species");
+    const speciesOptions = document.querySelectorAll(".species-option");
+    speciesOptions.forEach((option) => {
+      option.addEventListener("click", () => {
+        speciesOptions.forEach((other) => {
+          other.classList.remove("selected");
+          other.setAttribute("aria-pressed", "false");
+        });
+        option.classList.add("selected");
+        option.setAttribute("aria-pressed", "true");
+        speciesInput.value = option.dataset.species;
+      });
+    });
+
+    // ---- Unified auth modal: role selection -> owner register|login / vet
+    // register|login. On success this page always hands off to the
+    // matching dashboard via a full navigation (window.location.href),
+    // rather than rendering the dashboard in place — the dashboard views
+    // live in their own pages (web/dashboard.html, web/vet_dashboard.html).
+    const authModal = document.getElementById("authModal");
+    const authCloseBtn = document.getElementById("authCloseBtn");
+    const authStepRole = document.getElementById("authStepRole");
+    const authStepOwner = document.getElementById("authStepOwner");
+    const authStepVet = document.getElementById("authStepVet");
+    const ownerTabRegister = document.getElementById("ownerTabRegister");
+    const ownerTabLogin = document.getElementById("ownerTabLogin");
+    const profileForm = document.getElementById("profileForm");
+    const profileError = document.getElementById("profileError");
+    const ownerLoginForm = document.getElementById("ownerLoginForm");
+    const ownerLoginError = document.getElementById("ownerLoginError");
+    const vetTabRegister = document.getElementById("vetTabRegister");
+    const vetTabLogin = document.getElementById("vetTabLogin");
+    const vetRegisterForm = document.getElementById("vetRegisterForm");
+    const vetLoginForm = document.getElementById("vetLoginForm");
+    const vetRegisterError = document.getElementById("vetRegisterError");
+    const vetLoginError = document.getElementById("vetLoginError");
+    const vetDemoLoginBtn = document.getElementById("vetDemoLoginBtn");
+
+    function showAuthStep(step) {
+      authStepRole.classList.toggle("hidden", step !== "role");
+      authStepOwner.classList.toggle("hidden", step !== "owner");
+      authStepVet.classList.toggle("hidden", step !== "vet");
+    }
+
+    function openAuthModal(step) {
+      showAuthStep(step || "role");
+      authModal.classList.remove("hidden");
+    }
+
+    function closeAuthModal() {
+      authModal.classList.add("hidden");
+    }
+
+    document.getElementById("getStartedBtn").addEventListener("click", () => openAuthModal("role"));
+    document.getElementById("heroGetStartedBtn").addEventListener("click", () => openAuthModal("role"));
+    document.getElementById("bandGetStartedBtn").addEventListener("click", () => openAuthModal("role"));
+
+    authCloseBtn.addEventListener("click", closeAuthModal);
+    authModal.addEventListener("click", (event) => {
+      if (event.target === authModal) closeAuthModal(); // clicked the backdrop
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !authModal.classList.contains("hidden")) {
+        closeAuthModal();
+      }
+    });
+
+    document.querySelectorAll(".role-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        showAuthStep(card.dataset.role === "vet" ? "vet" : "owner");
+      });
+    });
+    document.querySelectorAll(".auth-back-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showAuthStep("role"));
+    });
+
+    function setOwnerTab(tab) {
+      ownerTabRegister.classList.toggle("active", tab === "register");
+      ownerTabLogin.classList.toggle("active", tab === "login");
+      profileForm.classList.toggle("hidden", tab !== "register");
+      ownerLoginForm.classList.toggle("hidden", tab !== "login");
+    }
+    ownerTabRegister.addEventListener("click", () => setOwnerTab("register"));
+    ownerTabLogin.addEventListener("click", () => setOwnerTab("login"));
+
+    function setVetTab(tab) {
+      vetTabRegister.classList.toggle("active", tab === "register");
+      vetTabLogin.classList.toggle("active", tab === "login");
+      vetRegisterForm.classList.toggle("hidden", tab !== "register");
+      vetLoginForm.classList.toggle("hidden", tab !== "login");
+    }
+    vetTabRegister.addEventListener("click", () => setVetTab("register"));
+    vetTabLogin.addEventListener("click", () => setVetTab("login"));
+
+    // Shared by both login forms (owner tab and vet tab) — the backend
+    // auto-detects which role an email belongs to (see
+    // app/routers/auth.py) and routes to whichever dashboard matches,
+    // even if the visitor picked the "wrong" tab to log in from.
+    async function attemptLogin(email, password) {
+      const response = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 401 ? "Invalid email or password." : `Request failed (HTTP ${response.status})`);
+      }
+      const body = await response.json();
+      if (body.role === "vet") {
+        localStorage.setItem(VET_SESSION_KEY, JSON.stringify({
+          vetId: body.vet.vet_id, vetName: body.vet.vet_name, clinicName: body.vet.clinic_name,
+        }));
+        window.location.href = "/vet";
+      } else {
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(accountToProfile(body.owner)));
+        window.location.href = "/dashboard";
+      }
+    }
+
+    ownerLoginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("ownerLoginEmail").value.trim();
+      const password = document.getElementById("ownerLoginPassword").value;
+      if (!email || !password) {
+        ownerLoginError.textContent = "Please enter both email and password.";
+        ownerLoginError.classList.remove("hidden");
+        return;
+      }
+      try {
+        await attemptLogin(email, password);
+        ownerLoginError.classList.add("hidden");
+      } catch (err) {
+        ownerLoginError.textContent = err.message;
+        ownerLoginError.classList.remove("hidden");
+      }
+    });
+
+    vetLoginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("vetLoginEmail").value.trim();
+      const password = document.getElementById("vetLoginPassword").value;
+      if (!email || !password) {
+        vetLoginError.textContent = "Please enter both email and password.";
+        vetLoginError.classList.remove("hidden");
+        return;
+      }
+      try {
+        await attemptLogin(email, password);
+        vetLoginError.classList.add("hidden");
+      } catch (err) {
+        vetLoginError.textContent = err.message;
+        vetLoginError.classList.remove("hidden");
+      }
+    });
+
+    vetDemoLoginBtn.addEventListener("click", () => {
+      // Pure client-side shortcut — no real account behind "demo-vet",
+      // kept for zero-setup demoing alongside the real login above.
+      localStorage.setItem(VET_SESSION_KEY, JSON.stringify({
+        vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true,
+      }));
+      window.location.href = "/vet";
+    });
+
+    vetRegisterForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fullName = document.getElementById("vetFullName").value.trim();
+      const clinicName = document.getElementById("vetClinicName").value.trim();
+      const clinicAddress = document.getElementById("vetClinicAddress").value.trim();
+      const phone = document.getElementById("vetPhone").value.trim();
+      const licenseNumber = document.getElementById("vetLicenseNumber").value.trim();
+      const username = document.getElementById("vetRegUsername").value.trim();
+      const email = document.getElementById("vetRegEmail").value.trim();
+      const password = document.getElementById("vetRegPassword").value;
+
+      if (!fullName || !clinicName || !clinicAddress || !phone || !licenseNumber || !username || !email || !password) {
+        vetRegisterError.textContent = "Please fill in every field before continuing.";
+        vetRegisterError.classList.remove("hidden");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/vets/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vet_name: fullName,
+            clinic_name: clinicName,
+            clinic_address: clinicAddress,
+            phone,
+            license_number: licenseNumber,
+            username,
+            email,
+            password,
+          }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(
+            response.status === 409
+              ? "An account with this email already exists — try logging in instead."
+              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
+          );
+        }
+        const { vet_id } = await response.json();
+        vetRegisterError.classList.add("hidden");
+        localStorage.setItem(VET_SESSION_KEY, JSON.stringify({ vetId: vet_id, vetName: fullName, clinicName }));
+        window.location.href = "/vet";
+      } catch (err) {
+        vetRegisterError.textContent = err.message;
+        vetRegisterError.classList.remove("hidden");
+      }
+    });
+
+    profileForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const ownerName = document.getElementById("ownerName").value.trim();
+      const email = document.getElementById("ownerEmail").value.trim();
+      const phone = document.getElementById("ownerPhone").value.trim();
+      const password = document.getElementById("ownerPassword").value;
+      const petName = document.getElementById("petName").value.trim();
+      const species = document.getElementById("species").value;
+      const petAgeRaw = document.getElementById("petAge").value;
+      const petAge = petAgeRaw === "" ? NaN : Number(petAgeRaw);
+      const vetId = clinicSelect.value;
+      const selectedClinic = currentClinicOptions.find((c) => c.vetId === vetId);
+
+      if (!ownerName || !email || !phone || !password || !petName || !species || Number.isNaN(petAge) || petAge < 0 || !vetId) {
+        profileError.textContent = "Please fill in every field before continuing.";
+        profileError.classList.remove("hidden");
+        return;
+      }
+      if (password.length < 8) {
+        profileError.textContent = "Password must be at least 8 characters.";
+        profileError.classList.remove("hidden");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/owners/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner_name: ownerName,
+            email,
+            phone,
+            password,
+            pet_name: petName,
+            species,
+            pet_age: petAge,
+            vet_id: vetId,
+            clinic_name: selectedClinic ? selectedClinic.clinicName : null,
+          }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(
+            response.status === 409
+              ? "An account with this email already exists — try logging in instead."
+              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
+          );
+        }
+        const { account } = await response.json();
+        profileError.classList.add("hidden");
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(accountToProfile(account)));
+        window.location.href = "/dashboard";
+      } catch (err) {
+        profileError.textContent = err.message;
+        profileError.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

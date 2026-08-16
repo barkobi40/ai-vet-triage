@@ -80,14 +80,6 @@
     transition: color 0.15s;
   }
   nav.links a:hover, nav.links button.nav-link:hover { color: #fff; }
-  nav.links a.cta {
-    background: var(--accent);
-    color: #fff;
-    padding: 0.55rem 1.3rem;
-    border-radius: 999px;
-    font-size: 0.85rem;
-  }
-  nav.links a.cta:hover { background: var(--accent-dark); color: #fff; }
 
   .vet-portal-btn {
     background: transparent;
@@ -104,23 +96,7 @@
   .vet-portal-btn:hover { border-color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.08); }
   .vet-portal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .vet-demo-btn {
-    display: block;
-    width: 100%;
-    text-align: center;
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: inherit;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-decoration: underline;
-    cursor: pointer;
-    margin-top: 1.1rem;
-  }
-  .vet-demo-btn:hover { color: var(--navy); }
-
-  /* ---- Unified auth modal (role selection -> owner profile / vet register|login) ---- */
+  /* ---- Profile edit modal (reuses the .auth-card look) ---- */
   .modal-card.auth-card { max-width: 520px; }
   .auth-card h2 { margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 900; color: var(--navy); padding-right: 0; }
   .auth-card .profile-subtitle { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
@@ -143,56 +119,6 @@
     box-shadow: 0 0 0 3px rgba(216, 27, 96, 0.12);
   }
   .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
-
-  .auth-back-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 0.82rem;
-    cursor: pointer;
-    padding: 0;
-    margin-bottom: 1.1rem;
-  }
-  .auth-back-btn:hover { color: var(--navy); }
-
-  .role-picker { display: flex; gap: 1rem; margin: 1.5rem 0 0.5rem; }
-  .role-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.5rem;
-    padding: 1.5rem 1rem;
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    background: #fff;
-    cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.15s, background 0.15s, transform 0.1s;
-  }
-  .role-card:hover { border-color: var(--accent); background: #FCE4EC; transform: translateY(-2px); }
-  .role-card .icon-badge { width: 52px; height: 52px; }
-  .role-card .icon-badge svg { width: 26px; height: 26px; }
-  .role-card strong { font-size: 0.98rem; color: var(--navy); }
-  .role-card span { font-size: 0.78rem; color: var(--muted); line-height: 1.35; }
-
-  .vet-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: #F3F4F6; border-radius: 999px; padding: 0.25rem; }
-  .vet-tab {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 0.55rem 0.5rem;
-    border-radius: 999px;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .vet-tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(26, 43, 72, 0.12); }
 
   .profile-submit {
     width: 100%;
@@ -217,53 +143,10 @@
     margin-bottom: 1rem;
   }
   .form-field-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
-
-  /* ---- Species picker (replaces the old <select>) ---- */
-  .species-picker { display: flex; gap: 0.85rem; margin-bottom: 1.1rem; }
-  .species-option {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 1rem 0.5rem 0.85rem;
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    background: #fff;
-    cursor: pointer;
-    font-family: inherit;
-    color: var(--muted);
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
-  }
-  .species-option:hover { border-color: #D8DBE2; }
-  .species-option:focus-visible, .modal-close:focus-visible, nav.links button.nav-link:focus-visible {
+  .modal-close:focus-visible, nav.links button.nav-link:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  .species-option svg { width: 32px; height: 32px; }
-  .species-option .species-label { font-size: 0.85rem; font-weight: 700; }
-  .species-option.selected {
-    border-color: var(--accent);
-    background: #FCE4EC;
-    color: var(--accent-dark);
-  }
-  .species-option .species-check {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #fff;
-    font-size: 0.7rem;
-    line-height: 1;
-    display: none;
-    align-items: center;
-    justify-content: center;
-  }
-  .species-option.selected .species-check { display: flex; }
 
   /* ---- "How it works" modal ---- */
   .modal-overlay {
@@ -473,7 +356,6 @@
     .care-strip { flex-direction: column; }
     .auth-card { padding: 1.75rem; }
     .auth-grid { grid-template-columns: 1fr; }
-    .role-picker { flex-direction: column; }
   }
 </style>
 </head>
@@ -485,11 +367,9 @@
       <div id="profileWidget" class="profile-widget"></div>
       <nav class="links">
         <button type="button" class="nav-link" id="howItWorksBtn">How it works</button>
-        <a href="#" class="cta" id="connectCta">Connect</a>
-        <button type="button" class="vet-portal-btn" id="vetPortalBtn">Vet Portal Login</button>
-        <button type="button" class="nav-link hidden" id="medicalRecordBtn">Medical Record</button>
-        <button type="button" class="nav-link hidden" id="profileBtn">Profile</button>
-        <button type="button" class="vet-portal-btn hidden" id="ownerLogoutBtn">Log Out</button>
+        <button type="button" class="nav-link" id="medicalRecordBtn">Medical Record</button>
+        <button type="button" class="nav-link" id="profileBtn">Profile</button>
+        <button type="button" class="vet-portal-btn" id="ownerLogoutBtn">Log Out</button>
       </nav>
     </div>
   </header>
@@ -541,192 +421,6 @@
         </div>
       </div>
       <button type="button" class="profile-submit" id="modalGotItBtn">Got it — Start Triage</button>
-    </div>
-  </div>
-
-  <div id="authModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-    <div class="modal-card auth-card">
-      <button type="button" class="modal-close hidden" id="authCloseBtn" aria-label="Close">&times;</button>
-
-      <!-- Step 1: role selection -->
-      <div id="authStepRole">
-        <h2 id="authModalTitle">Welcome to PawAlert</h2>
-        <p class="profile-subtitle">Choose how you'd like to continue.</p>
-        <div class="role-picker">
-          <button type="button" class="role-card" data-role="owner">
-            <span class="icon-badge" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="currentColor"><title>Paw</title>
-                <ellipse cx="12" cy="16.2" rx="5" ry="4.2"/>
-                <ellipse cx="5.4" cy="10.2" rx="2" ry="2.6" transform="rotate(-20 5.4 10.2)"/>
-                <ellipse cx="9.6" cy="6.4" rx="2" ry="2.6" transform="rotate(-8 9.6 6.4)"/>
-                <ellipse cx="14.4" cy="6.4" rx="2" ry="2.6" transform="rotate(8 14.4 6.4)"/>
-                <ellipse cx="18.6" cy="10.2" rx="2" ry="2.6" transform="rotate(20 18.6 10.2)"/>
-              </svg>
-            </span>
-            <strong>Pet Owner</strong>
-            <span>Submit cases and track live triage updates</span>
-          </button>
-          <button type="button" class="role-card" data-role="vet">
-            <span class="icon-badge" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><title>Shield with checkmark</title>
-                <path d="M12 3 L19 6 V11 C19 16 16 19.5 12 21 C8 19.5 5 16 5 11 V6 Z"/>
-                <path d="M8.5 12 L11 14.5 L15.5 9.5"/>
-              </svg>
-            </span>
-            <strong>Veterinarian</strong>
-            <span>Review cases and respond to pet owners</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 2a: pet owner register / login -->
-      <div id="authStepOwner" class="hidden">
-        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
-        <div class="vet-tabs">
-          <button type="button" class="vet-tab active" id="ownerTabRegister" data-owner-tab="register">Register</button>
-          <button type="button" class="vet-tab" id="ownerTabLogin" data-owner-tab="login">Login</button>
-        </div>
-
-        <form id="profileForm" novalidate>
-          <h2>Create Your Account</h2>
-          <p class="profile-subtitle">Tell us about you and your pet before you continue to the live dashboard.</p>
-          <div id="profileError" class="profile-error hidden"></div>
-
-          <label for="ownerName">Owner's Full Name
-            <input type="text" id="ownerName" name="ownerName" autocomplete="name" required />
-          </label>
-          <div class="auth-grid">
-            <label for="ownerEmail">Email
-              <input type="email" id="ownerEmail" autocomplete="email" required />
-            </label>
-            <label for="ownerPhone">Phone Number
-              <input type="tel" id="ownerPhone" autocomplete="tel" required />
-            </label>
-          </div>
-          <label for="ownerPassword">Password
-            <input type="password" id="ownerPassword" autocomplete="new-password" minlength="8" required />
-          </label>
-          <label for="petName">Pet's Name
-            <input type="text" id="petName" name="petName" required />
-          </label>
-          <div>
-            <span class="form-field-label">Species</span>
-            <div class="species-picker" role="group" aria-label="Select species">
-              <button type="button" class="species-option" data-species="Dog" aria-pressed="false">
-                <span class="species-check" aria-hidden="true">&#10003;</span>
-                <svg viewBox="0 0 48 48" fill="none"><title>Dog</title>
-                  <path d="M14 20 C6 20 4 30 8 36 C11 40 16 38 16 32 L16 20 Z" fill="currentColor" opacity="0.9"/>
-                  <path d="M34 20 C42 20 44 30 40 36 C37 40 32 38 32 32 L32 20 Z" fill="currentColor" opacity="0.9"/>
-                  <ellipse cx="24" cy="24" rx="12" ry="11" fill="currentColor"/>
-                  <ellipse cx="24" cy="29" rx="6" ry="5" fill="#fff"/>
-                  <circle cx="24" cy="27" r="1.6" fill="currentColor"/>
-                  <circle cx="19" cy="21" r="1.6" fill="#fff"/>
-                  <circle cx="29" cy="21" r="1.6" fill="#fff"/>
-                </svg>
-                <span class="species-label">Dog</span>
-              </button>
-              <button type="button" class="species-option" data-species="Cat" aria-pressed="false">
-                <span class="species-check" aria-hidden="true">&#10003;</span>
-                <svg viewBox="0 0 48 48" fill="none"><title>Cat</title>
-                  <path d="M12 20 L8 8 L20 16 Z" fill="currentColor"/>
-                  <path d="M36 20 L40 8 L28 16 Z" fill="currentColor"/>
-                  <circle cx="24" cy="26" r="13" fill="currentColor"/>
-                  <ellipse cx="24" cy="30" rx="5" ry="3.5" fill="#fff"/>
-                  <path d="M24 27 L22 30 L26 30 Z" fill="currentColor"/>
-                  <ellipse cx="18" cy="24" rx="1.6" ry="2" fill="#fff"/>
-                  <ellipse cx="30" cy="24" rx="1.6" ry="2" fill="#fff"/>
-                  <path d="M8 28 L16 27 M8 32 L16 31 M40 28 L32 27 M40 32 L32 31" stroke="#fff" stroke-width="1"/>
-                </svg>
-                <span class="species-label">Cat</span>
-              </button>
-            </div>
-            <input type="hidden" id="species" name="species" />
-          </div>
-          <label for="petAge">Age
-            <input type="number" id="petAge" name="petAge" min="0" step="0.5" required />
-          </label>
-          <label for="clinicSelect">Select Your Veterinarian / Clinic
-            <select id="clinicSelect" name="clinicSelect" required>
-              <option value="" disabled selected>Loading clinics...</option>
-            </select>
-          </label>
-
-          <button type="submit" class="profile-submit">Register &amp; Continue to Dashboard</button>
-        </form>
-
-        <form id="ownerLoginForm" class="hidden" novalidate>
-          <h2>Pet Owner Login</h2>
-          <p class="profile-subtitle">Sign in to your account.</p>
-          <div id="ownerLoginError" class="profile-error hidden"></div>
-          <label for="ownerLoginEmail">Email
-            <input type="email" id="ownerLoginEmail" autocomplete="email" required />
-          </label>
-          <label for="ownerLoginPassword">Password
-            <input type="password" id="ownerLoginPassword" autocomplete="current-password" required />
-          </label>
-          <button type="submit" class="profile-submit">Log In</button>
-        </form>
-      </div>
-
-      <!-- Step 2b: veterinarian register / login -->
-      <div id="authStepVet" class="hidden">
-        <button type="button" class="auth-back-btn" data-back-to="role">&larr; Back</button>
-        <div class="vet-tabs">
-          <button type="button" class="vet-tab active" id="vetTabRegister" data-vet-tab="register">Register</button>
-          <button type="button" class="vet-tab" id="vetTabLogin" data-vet-tab="login">Login</button>
-        </div>
-
-        <form id="vetRegisterForm" novalidate>
-          <h2>Veterinarian Registration</h2>
-          <p class="profile-subtitle">Create your clinic account to access the vet portal.</p>
-          <div id="vetRegisterError" class="profile-error hidden"></div>
-          <div class="auth-grid">
-            <label for="vetFullName">Full Name
-              <input type="text" id="vetFullName" autocomplete="name" required />
-            </label>
-            <label for="vetClinicName">Hospital / Clinic Name
-              <input type="text" id="vetClinicName" required />
-            </label>
-          </div>
-          <label for="vetClinicAddress">Clinic Address
-            <input type="text" id="vetClinicAddress" autocomplete="street-address" required />
-          </label>
-          <div class="auth-grid">
-            <label for="vetPhone">Phone Number
-              <input type="tel" id="vetPhone" autocomplete="tel" required />
-            </label>
-            <label for="vetLicenseNumber">License Number
-              <input type="text" id="vetLicenseNumber" required />
-            </label>
-          </div>
-          <div class="auth-grid">
-            <label for="vetRegUsername">Username
-              <input type="text" id="vetRegUsername" autocomplete="username" required />
-            </label>
-            <label for="vetRegEmail">Email
-              <input type="email" id="vetRegEmail" autocomplete="email" required />
-            </label>
-          </div>
-          <label for="vetRegPassword">Password
-            <input type="password" id="vetRegPassword" autocomplete="new-password" minlength="8" required />
-          </label>
-          <button type="submit" class="profile-submit">Register &amp; Enter Vet Portal</button>
-        </form>
-
-        <form id="vetLoginForm" class="hidden" novalidate>
-          <h2>Veterinarian Login</h2>
-          <p class="profile-subtitle">Sign in to your clinic account.</p>
-          <div id="vetLoginError" class="profile-error hidden"></div>
-          <label for="vetLoginEmail">Email
-            <input type="email" id="vetLoginEmail" autocomplete="email" required />
-          </label>
-          <label for="vetLoginPassword">Password
-            <input type="password" id="vetLoginPassword" autocomplete="current-password" required />
-          </label>
-          <button type="submit" class="profile-submit">Log In</button>
-          <button type="button" class="vet-demo-btn" id="vetDemoLoginBtn">Log in as Demo Vet (no account needed)</button>
-        </form>
-      </div>
     </div>
   </div>
 
@@ -949,15 +643,13 @@
   </script>
 
   <script>
-    // Owner/pet profile onboarding — independent of the WebSocket logic
-    // above (which connects unconditionally regardless of which view is
-    // showing, so no live updates are ever missed while the auth modal is
-    // up: they land in the still-hidden #rows table and are already there
-    // once the dashboard is revealed).
+    // Owner/pet profile — independent of the WebSocket logic above (which
+    // connects unconditionally regardless of which view is showing, so no
+    // live updates are ever missed while the redirect-to-landing check
+    // below runs: they land in the still-hidden #rows table and are
+    // already there once the dashboard is revealed).
     const PROFILE_STORAGE_KEY = "vetTriageProfile";
     const dashboardView = document.getElementById("dashboardView");
-    const profileForm = document.getElementById("profileForm");
-    const profileError = document.getElementById("profileError");
     const profileWidget = document.getElementById("profileWidget");
 
     function loadProfile() {
@@ -1008,44 +700,6 @@
       }
     }
 
-    // Clinic directory for the "Select Your Veterinarian / Clinic" field.
-    // vet-id "demo-vet" deliberately matches the "Log in as Demo Vet"
-    // quick-login below, so picking "Demo Clinic" here and logging in as
-    // Demo Vet on /vet demonstrates real case-highlighting without needing
-    // any vet to have actually registered first.
-    const DEFAULT_CLINICS = [
-      { vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic" },
-      { vetId: "clinic-sunrise", vetName: "Dr. Amara Chen", clinicName: "Sunrise Animal Hospital" },
-      { vetId: "clinic-northgate", vetName: "Dr. Miguel Torres", clinicName: "Northgate Veterinary Care" },
-    ];
-    const clinicSelect = document.getElementById("clinicSelect");
-    let currentClinicOptions = DEFAULT_CLINICS;
-
-    function renderClinicOptions(options) {
-      currentClinicOptions = options;
-      clinicSelect.innerHTML =
-        `<option value="" disabled selected>Select a clinic</option>` +
-        options.map((c) => `<option value="${c.vetId}">${c.clinicName} — ${c.vetName}</option>`).join("");
-    }
-
-    async function loadClinicOptions() {
-      try {
-        const response = await fetch("/api/v1/vets");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const { vets } = await response.json();
-        const options = vets.map((v) => ({ vetId: v.vet_id, vetName: v.vet_name, clinicName: v.clinic_name }));
-        // Registered vets first, then the always-available demo/default
-        // options, so the dropdown is never empty even with zero real
-        // registrations yet.
-        renderClinicOptions([...options, ...DEFAULT_CLINICS]);
-      } catch {
-        // No AWS configured, network hiccup, etc. — the clean default list
-        // the requirements explicitly call for as a fallback.
-        renderClinicOptions(DEFAULT_CLINICS);
-      }
-    }
-    loadClinicOptions();
-
     function renderProfileWidget(profile) {
       let text = `Owner: ${profile.ownerName} | Pet: ${profile.petName} (${profile.species}, ${profile.petAge} y/o)`;
       if (profile.clinicName) text += ` | Clinic: ${profile.clinicName}`;
@@ -1054,40 +708,9 @@
 
     function showDashboard(profile) {
       renderProfileWidget(profile);
-      closeAuthModal(true); // force-close even if opened non-dismissable
       dashboardView.classList.remove("hidden");
       loadExistingCases(profile.ownerId);
-
-      // Role-based nav: a logged-in pet owner has no business jumping
-      // into the vet portal from here — that surface is hidden, and
-      // "Profile" / "Log Out" take its place. "How it works" stays
-      // visible either way since it's contextual help, not a
-      // role/session control.
-      connectCta.classList.add("hidden");
-      vetPortalBtn.classList.add("hidden");
-      medicalRecordBtn.classList.remove("hidden");
-      profileBtn.classList.remove("hidden");
-      ownerLogoutBtn.classList.remove("hidden");
     }
-
-    // Species picker: two clickable cards standing in for the old <select>.
-    // The selected value is written into the hidden #species input, so the
-    // submit handler below reads it exactly the same way it always has —
-    // .value, no other change needed there.
-    const speciesInput = document.getElementById("species");
-    const speciesOptions = document.querySelectorAll(".species-option");
-
-    speciesOptions.forEach((option) => {
-      option.addEventListener("click", () => {
-        speciesOptions.forEach((other) => {
-          other.classList.remove("selected");
-          other.setAttribute("aria-pressed", "false");
-        });
-        option.classList.add("selected");
-        option.setAttribute("aria-pressed", "true");
-        speciesInput.value = option.dataset.species;
-      });
-    });
 
     // "How it works" modal.
     const howItWorksBtn = document.getElementById("howItWorksBtn");
@@ -1101,12 +724,7 @@
 
     function closeHowItWorksModal() {
       howItWorksModal.classList.add("hidden");
-      // Send focus to whichever view is actually active.
-      if (!authModal.classList.contains("hidden")) {
-        document.getElementById("ownerName").focus();
-      } else {
-        howItWorksBtn.focus();
-      }
+      howItWorksBtn.focus();
     }
 
     howItWorksBtn.addEventListener("click", openHowItWorksModal);
@@ -1121,100 +739,22 @@
       }
     });
 
-    // ---- Unified auth modal: role selection -> owner register|login / vet
-    // register|login. Both roles now have real backend accounts (see
-    // app/routers/owners.py, app/routers/vets.py, app/routers/auth.py) —
-    // passwords are hashed server-side (app/services/security.py) and
-    // login is a single endpoint that auto-detects which role an email
-    // belongs to, so either login form works regardless of which role
-    // card was clicked to get there.
-    const VET_SESSION_KEY = "vetTriageVetSession";
-    const vetPortalBtn = document.getElementById("vetPortalBtn");
-    const connectCta = document.getElementById("connectCta");
+    // Registration/login now live entirely on the landing page (see
+    // web/landing.html) — this page is reached only once a profile
+    // already exists in localStorage (see the bootstrap check at the
+    // bottom of this file), so all it needs here is the logged-in nav.
     const medicalRecordBtn = document.getElementById("medicalRecordBtn");
     const profileBtn = document.getElementById("profileBtn");
     const ownerLogoutBtn = document.getElementById("ownerLogoutBtn");
-    const authModal = document.getElementById("authModal");
-    const authCloseBtn = document.getElementById("authCloseBtn");
-    const authStepRole = document.getElementById("authStepRole");
-    const authStepOwner = document.getElementById("authStepOwner");
-    const authStepVet = document.getElementById("authStepVet");
-    const ownerTabRegister = document.getElementById("ownerTabRegister");
-    const ownerTabLogin = document.getElementById("ownerTabLogin");
-    const ownerLoginForm = document.getElementById("ownerLoginForm");
-    const ownerLoginError = document.getElementById("ownerLoginError");
-    const vetTabRegister = document.getElementById("vetTabRegister");
-    const vetTabLogin = document.getElementById("vetTabLogin");
-    const vetRegisterForm = document.getElementById("vetRegisterForm");
-    const vetLoginForm = document.getElementById("vetLoginForm");
-    const vetRegisterError = document.getElementById("vetRegisterError");
-    const vetLoginError = document.getElementById("vetLoginError");
-    const vetDemoLoginBtn = document.getElementById("vetDemoLoginBtn");
-
-    let authModalDismissable = false;
-
-    function showAuthStep(step) {
-      authStepRole.classList.toggle("hidden", step !== "role");
-      authStepOwner.classList.toggle("hidden", step !== "owner");
-      authStepVet.classList.toggle("hidden", step !== "vet");
-    }
-
-    function openAuthModal(step, dismissable) {
-      authModalDismissable = dismissable;
-      authCloseBtn.classList.toggle("hidden", !dismissable);
-      showAuthStep(step);
-      authModal.classList.remove("hidden");
-    }
-
-    function closeAuthModal(force) {
-      // The mandatory first-visit flow (no profile, no vet session yet)
-      // can't be dismissed without picking a role — force=true is used
-      // only by showDashboard()/enterVetPortal() once a choice was made.
-      if (!authModalDismissable && !force) return;
-      authModal.classList.add("hidden");
-      vetPortalBtn.focus();
-    }
-
-    function enterVetPortal(session) {
-      localStorage.setItem(VET_SESSION_KEY, JSON.stringify(session));
-      window.location.href = "/vet";
-    }
-
-    // Shared by both login forms (owner tab and vet tab) — login doesn't
-    // need to know in advance which role an email belongs to, the backend
-    // detects it (see app/routers/auth.py). Routes to whichever dashboard
-    // actually matches, even if the user picked the "wrong" tab to log in
-    // from.
-    async function attemptLogin(email, password) {
-      const response = await fetch("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) {
-        throw new Error(response.status === 401 ? "Invalid email or password." : `Request failed (HTTP ${response.status})`);
-      }
-      const body = await response.json();
-      if (body.role === "vet") {
-        enterVetPortal({ vetId: body.vet.vet_id, vetName: body.vet.vet_name, clinicName: body.vet.clinic_name });
-      } else {
-        const profile = accountToProfile(body.owner);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-        showDashboard(profile);
-      }
-    }
-
-    vetPortalBtn.addEventListener("click", () => openAuthModal("vet", true));
 
     ownerLogoutBtn.addEventListener("click", () => {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
-      window.location.reload();
+      window.location.href = "/";
     });
 
     // "Profile" opens an edit modal for the owner's own details and pet
-    // details — there's no "Change Role" anymore; switching roles now
-    // only happens via Log Out (back to the mandatory Pet Owner vs.
-    // Veterinarian picker), not from inside an active owner session.
+    // details — there's no "Change Role" here; switching roles happens
+    // via Log Out, which returns to the landing page's role picker.
     const profileEditModal = document.getElementById("profileEditModal");
     const profileEditCloseBtn = document.getElementById("profileEditCloseBtn");
     const profileEditForm = document.getElementById("profileEditForm");
@@ -1315,134 +855,6 @@
       }
     });
 
-    authCloseBtn.addEventListener("click", () => closeAuthModal(false));
-    authModal.addEventListener("click", (event) => {
-      if (event.target === authModal) closeAuthModal(false); // clicked the backdrop
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !authModal.classList.contains("hidden")) {
-        closeAuthModal(false);
-      }
-    });
-
-    document.querySelectorAll(".role-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        showAuthStep(card.dataset.role === "vet" ? "vet" : "owner");
-      });
-    });
-    document.querySelectorAll(".auth-back-btn").forEach((btn) => {
-      btn.addEventListener("click", () => showAuthStep("role"));
-    });
-
-    function setVetTab(tab) {
-      vetTabRegister.classList.toggle("active", tab === "register");
-      vetTabLogin.classList.toggle("active", tab === "login");
-      vetRegisterForm.classList.toggle("hidden", tab !== "register");
-      vetLoginForm.classList.toggle("hidden", tab !== "login");
-    }
-    vetTabRegister.addEventListener("click", () => setVetTab("register"));
-    vetTabLogin.addEventListener("click", () => setVetTab("login"));
-
-    function setOwnerTab(tab) {
-      ownerTabRegister.classList.toggle("active", tab === "register");
-      ownerTabLogin.classList.toggle("active", tab === "login");
-      profileForm.classList.toggle("hidden", tab !== "register");
-      ownerLoginForm.classList.toggle("hidden", tab !== "login");
-    }
-    ownerTabRegister.addEventListener("click", () => setOwnerTab("register"));
-    ownerTabLogin.addEventListener("click", () => setOwnerTab("login"));
-
-    ownerLoginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const email = document.getElementById("ownerLoginEmail").value.trim();
-      const password = document.getElementById("ownerLoginPassword").value;
-      if (!email || !password) {
-        ownerLoginError.textContent = "Please enter both email and password.";
-        ownerLoginError.classList.remove("hidden");
-        return;
-      }
-      try {
-        await attemptLogin(email, password);
-        ownerLoginError.classList.add("hidden");
-      } catch (err) {
-        ownerLoginError.textContent = err.message;
-        ownerLoginError.classList.remove("hidden");
-      }
-    });
-
-    vetRegisterForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const fullName = document.getElementById("vetFullName").value.trim();
-      const clinicName = document.getElementById("vetClinicName").value.trim();
-      const clinicAddress = document.getElementById("vetClinicAddress").value.trim();
-      const phone = document.getElementById("vetPhone").value.trim();
-      const licenseNumber = document.getElementById("vetLicenseNumber").value.trim();
-      const username = document.getElementById("vetRegUsername").value.trim();
-      const email = document.getElementById("vetRegEmail").value.trim();
-      const password = document.getElementById("vetRegPassword").value;
-
-      if (!fullName || !clinicName || !clinicAddress || !phone || !licenseNumber || !username || !email || !password) {
-        vetRegisterError.textContent = "Please fill in every field before continuing.";
-        vetRegisterError.classList.remove("hidden");
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/v1/vets/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            vet_name: fullName,
-            clinic_name: clinicName,
-            clinic_address: clinicAddress,
-            phone,
-            license_number: licenseNumber,
-            username,
-            email,
-            password,
-          }),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(
-            response.status === 409
-              ? "An account with this email already exists — try logging in instead."
-              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
-          );
-        }
-        const { vet_id } = await response.json();
-        vetRegisterError.classList.add("hidden");
-        enterVetPortal({ vetId: vet_id, vetName: fullName, clinicName });
-      } catch (err) {
-        vetRegisterError.textContent = err.message;
-        vetRegisterError.classList.remove("hidden");
-      }
-    });
-
-    vetLoginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const email = document.getElementById("vetLoginEmail").value.trim();
-      const password = document.getElementById("vetLoginPassword").value;
-      if (!email || !password) {
-        vetLoginError.textContent = "Please enter both email and password.";
-        vetLoginError.classList.remove("hidden");
-        return;
-      }
-      try {
-        await attemptLogin(email, password);
-        vetLoginError.classList.add("hidden");
-      } catch (err) {
-        vetLoginError.textContent = err.message;
-        vetLoginError.classList.remove("hidden");
-      }
-    });
-
-    vetDemoLoginBtn.addEventListener("click", () => {
-      // Pure client-side shortcut — no real account behind "demo-vet",
-      // kept for zero-setup demoing alongside the real login above.
-      enterVetPortal({ vetId: "demo-vet", vetName: "Demo Vet", clinicName: "Demo Clinic", demo: true });
-    });
-
     // Submit New Case: calls the real backend (POST /api/v1/triage/upload-url,
     // then PUT the file straight to S3) — nothing here is mocked. If AWS
     // isn't configured on the server, the first call fails with a clear
@@ -1531,74 +943,15 @@
       }
     });
 
-    profileForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const ownerName = document.getElementById("ownerName").value.trim();
-      const email = document.getElementById("ownerEmail").value.trim();
-      const phone = document.getElementById("ownerPhone").value.trim();
-      const password = document.getElementById("ownerPassword").value;
-      const petName = document.getElementById("petName").value.trim();
-      const species = document.getElementById("species").value;
-      const petAgeRaw = document.getElementById("petAge").value;
-      const petAge = petAgeRaw === "" ? NaN : Number(petAgeRaw);
-      const vetId = clinicSelect.value;
-      const selectedClinic = currentClinicOptions.find((c) => c.vetId === vetId);
-
-      if (!ownerName || !email || !phone || !password || !petName || !species || Number.isNaN(petAge) || petAge < 0 || !vetId) {
-        profileError.textContent = "Please fill in every field before continuing.";
-        profileError.classList.remove("hidden");
-        return;
-      }
-      if (password.length < 8) {
-        profileError.textContent = "Password must be at least 8 characters.";
-        profileError.classList.remove("hidden");
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/v1/owners/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            owner_name: ownerName,
-            email,
-            phone,
-            password,
-            pet_name: petName,
-            species,
-            pet_age: petAge,
-            vet_id: vetId,
-            clinic_name: selectedClinic ? selectedClinic.clinicName : null,
-          }),
-        });
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(
-            response.status === 409
-              ? "An account with this email already exists — try logging in instead."
-              : (body.detail ? JSON.stringify(body.detail) : `Request failed (HTTP ${response.status})`)
-          );
-        }
-        const { account } = await response.json();
-        profileError.classList.add("hidden");
-        const profile = accountToProfile(account);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-        showDashboard(profile);
-      } catch (err) {
-        profileError.textContent = err.message;
-        profileError.classList.remove("hidden");
-      }
-    });
-
-    // On load: skip straight to the dashboard if a profile is already saved.
-    // Otherwise show the mandatory (non-dismissable) role-selection modal —
-    // a first-time visitor must pick a role before the app is usable.
+    // On load: skip straight to the dashboard if a profile is already
+    // saved. Otherwise this page has nothing to show an unauthenticated
+    // visitor — registration/login live on the landing page — so send
+    // them there.
     const existingProfile = loadProfile();
     if (existingProfile) {
       showDashboard(existingProfile);
     } else {
-      openAuthModal("role", false);
+      window.location.href = "/";
     }
   </script>
 </body>

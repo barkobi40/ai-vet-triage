@@ -352,9 +352,9 @@
   </div>
 
   <script>
-    // Demo-only vet "session" gate — see web/dashboard.html's Vet Portal
-    // modal for how this gets set. No real backend auth exists; this just
-    // keeps someone from landing on /vet without going through the modal.
+    // Vet session gate — set by a real login/registration or the demo-vet
+    // shortcut on the landing page (web/landing.html). Keeps someone from
+    // landing directly on /vet without going through that flow first.
     const VET_SESSION_KEY = "vetTriageVetSession";
     let vetSession = null;
     try {
@@ -363,14 +363,14 @@
       vetSession = null;
     }
     if (!vetSession) {
-      window.location.href = "/dashboard";
+      window.location.href = "/";
     } else {
       document.getElementById("vetWidget").textContent = `${vetSession.vetName} · ${vetSession.clinicName}`;
     }
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem(VET_SESSION_KEY);
-      window.location.href = "/dashboard";
+      window.location.href = "/";
     });
 
     // ---- WebSocket: same channel the owner dashboard uses. Any case

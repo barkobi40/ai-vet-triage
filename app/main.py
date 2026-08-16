@@ -50,6 +50,21 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/", tags=["dashboard"])
+async def landing() -> FileResponse:
+    """
+    Serves web/landing.html — the public marketing/welcome page for
+    non-authenticated visitors (hero, "how it works" flow, and the
+    role-selection auth modal). Same-origin for the same reason as
+    GET /dashboard below: its auth forms call /api/v1/... same-origin,
+    which only works cleanly when the page isn't opened via file://.
+    An already-logged-in visitor never sees this page render — the
+    landing page's own <head> script redirects to /dashboard or /vet
+    before the body paints.
+    """
+    return FileResponse(WEB_DIR / "landing.html")
+
+
 @app.get("/dashboard", tags=["dashboard"])
 async def dashboard() -> FileResponse:
     """
